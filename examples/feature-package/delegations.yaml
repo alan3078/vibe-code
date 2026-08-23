@@ -1,0 +1,39 @@
+schema_version: 1
+delegations:
+  - delegation_id: "EXAMPLE-DEL-001"
+    task_id: "TASK-001"
+    role: "tdd-developer"
+    goal: "Implement the local health command entry point and validator-failure propagation defined by TASK-001; TASK-002 owns test-failure orchestration"
+    authoritative_context:
+      - "examples/feature-package/feature.md"
+      - "examples/feature-package/acceptance.md"
+    allowed_files:
+      - "tests/**"
+      - "scripts/**"
+    allowed_tools:
+      - read
+      - search
+      - edit
+      - execute
+    allowed_side_effects:
+      - "Create ignored .venv files and populate the package cache from uv.lock when the environment is absent"
+      - "Download only locked development dependencies during environment preparation"
+    non_goals:
+      - "Do not add application network, deployment, credential, or publication behavior"
+    acceptance_criteria:
+      - "RED, GREEN, and full-suite evidence reference one revision"
+    verification_commands:
+      - "uv run --frozen --extra test python scripts/validate_scaffold.py"
+      - "uv run --frozen --extra test pytest -q"
+    required_return_fields:
+      - status
+      - files_changed
+      - commands_run
+      - evidence
+      - risks_or_unknowns
+      - recommended_next_state
+    stop_conditions:
+      - scope expansion
+      - conflicting authoritative artifacts
+      - secret or permission prompt
+      - destructive or production action not explicitly authorized

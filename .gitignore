@@ -1,0 +1,30 @@
+/.venv/
+/node_modules/
+/apps/*/node_modules/
+/apps/*/dist/
+/apps/*/.vite/
+/__pycache__/
+/.pytest_cache/
+*.pyc
+*.egg-info/
+.env
+.env.*
+!.env.example
+.DS_Store
+
+# Terraform local state and generated working directory.
+# Keep workspace-template/.terraform.lock.hcl committed to pin provider versions.
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.tfstate.lock.info
+crash.log
+crash.*.log
+*.tfvars
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc

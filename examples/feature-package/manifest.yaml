@@ -1,0 +1,155 @@
+schema_version: 1
+feature_id: "EXAMPLE-HEALTH-001"
+title: "Project Health Command"
+lifecycle_state: IMPLEMENTING
+status: EXAMPLE_ONLY
+version: 1
+artifacts:
+  proposal: "feature.md"
+  use_cases: "use-cases.md"
+  discovery: "discovery.md"
+  design: "design.md"
+  plan: "plan.md"
+  tasks: "tasks.md"
+  acceptance: "acceptance.md"
+  verification: "verification.md"
+  reviews: "reviews.md"
+  retrospective: "retrospective.md"
+  delegations: "delegations.yaml"
+  exceptions: "exceptions.json"
+adr_assessment:
+  required: false
+  rationale: "Approved at design review: the wrapper composes existing checks and introduces no cross-component architectural decision"
+owners:
+  orchestrator: "example:orchestrator"
+  product_manager: "example:product-manager"
+  discovery_analyst: "example:discovery-analyst"
+  architect: "example:architect"
+  implementation_planner: "example:implementation-planner"
+  implementer: "example:tdd-developer"
+  debugger: "example:debugger"
+  test_specialist: "example:test-specialist"
+  spec_reviewer: "example:spec-reviewer"
+  quality_reviewer: "example:code-reviewer"
+  security_reviewer: "example:security-reviewer"
+  accessibility_reviewer: "example:accessibility-reviewer"
+  operational_readiness_reviewer: "example:operational-readiness-reviewer"
+  verifier: "example:release-verifier"
+  knowledge_curator: "example:knowledge-curator"
+evidence:
+  tdd_cycles: "tasks.md#task-001-tdd-evidence"
+  full_suite: "verification.md"
+  verification: "verification.md"
+gates:
+  proposal:
+    owner: "example:product-manager"
+    checked_inputs: ["feature.md", "use-cases.md"]
+    result: PASS
+    evidence: ["feature.md", "use-cases.md"]
+    failure_reason: null
+    exception_id: null
+    next_transition: DISCOVERY
+  discovery:
+    owner: "example:discovery-analyst"
+    checked_inputs: ["discovery.md"]
+    result: PASS
+    evidence: ["discovery.md"]
+    failure_reason: null
+    exception_id: null
+    next_transition: DESIGN
+  design:
+    owner: "example:architect"
+    checked_inputs: ["design.md", "acceptance.md"]
+    result: PASS
+    evidence: ["design.md", "acceptance.md"]
+    failure_reason: null
+    exception_id: null
+    next_transition: PLANNED
+  plan:
+    owner: "example:implementation-planner"
+    checked_inputs: ["plan.md", "tasks.md"]
+    result: PASS
+    evidence: ["plan.md", "tasks.md"]
+    failure_reason: null
+    exception_id: null
+    next_transition: IMPLEMENTING
+  tdd:
+    owner: "example:tdd-developer"
+    checked_inputs: []
+    result: PENDING
+    evidence: []
+    failure_reason: null
+    exception_id: null
+    next_transition: SPEC_REVIEW
+  spec_review:
+    owner: "example:spec-reviewer"
+    checked_inputs: []
+    result: PENDING
+    evidence: []
+    failure_reason: null
+    exception_id: null
+    next_transition: QUALITY_SECURITY_REVIEW
+  quality_review:
+    owner: "example:code-reviewer"
+    checked_inputs: []
+    result: PENDING
+    evidence: []
+    failure_reason: null
+    exception_id: null
+    next_transition: QUALITY_SECURITY_REVIEW
+  security_review:
+    owner: "example:security-reviewer"
+    checked_inputs: []
+    result: PENDING
+    evidence: []
+    failure_reason: null
+    exception_id: null
+    next_transition: VERIFYING
+  accessibility_review:
+    applicability: NOT_APPLICABLE
+    owner: "example:accessibility-reviewer"
+    checked_inputs: ["design.md", "use-cases.md"]
+    result: PENDING
+    evidence: ["reviews.md#accessibility-review"]
+    not_applicable_rationale: "No UI, semantic, keyboard, visual, assistive-technology, or content-presentation change"
+    failure_reason: null
+    exception_id: null
+    next_transition: VERIFYING
+  operational_readiness_review:
+    applicability: NOT_APPLICABLE
+    owner: "example:operational-readiness-reviewer"
+    checked_inputs: ["design.md", "use-cases.md"]
+    result: PENDING
+    evidence: ["reviews.md#operational-readiness-review"]
+    not_applicable_rationale: "No deployment, migration, runtime service, availability, capacity, recovery, or rollback impact"
+    failure_reason: null
+    exception_id: null
+    next_transition: VERIFYING
+  verification:
+    owner: "example:release-verifier"
+    checked_inputs: []
+    result: PENDING
+    evidence: []
+    failure_reason: null
+    exception_id: null
+    next_transition: RELEASE_READY
+  release:
+    owner: "example:product-manager"
+    checked_inputs: []
+    result: PENDING
+    evidence: []
+    failure_reason: null
+    exception_id: null
+    next_transition: RELEASED
+post_release:
+  released_revision: null
+  retrospective: "retrospective.md"
+  documentation_candidate_revision: null
+  knowledge_writeback: null
+  closure_evidence: null
+blocker:
+  reason: null
+  resolver: null
+  resume_state: null
+  evidence: []
+exceptions_file: exceptions.json

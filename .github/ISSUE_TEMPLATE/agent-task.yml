@@ -1,0 +1,36 @@
+name: Agent task
+description: Create a bounded, reviewable task for a human or AI agent
+title: "[Agent Task] "
+labels: ["agent-task"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: One observable outcome.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Authoritative context and artifact links
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Allowed scope, files, tools, and side effects
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria and exact verification commands
+    validations:
+      required: true
+  - type: textarea
+    id: stop
+    attributes:
+      label: Stop and escalation conditions
+    validations:
+      required: true

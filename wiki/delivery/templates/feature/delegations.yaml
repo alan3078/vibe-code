@@ -1,0 +1,32 @@
+schema_version: 1
+delegations:
+  - delegation_id: "{{DELEGATION_ID}}"
+    task_id: "{{TASK_ID}}"
+    role: "{{ROLE}}"
+    goal: "{{OBSERVABLE_GOAL}}"
+    authoritative_context:
+      - "{{ARTIFACT_PATH}}"
+    allowed_files:
+      - "{{PATH_OR_GLOB}}"
+    allowed_tools:
+      - read
+      - search
+    allowed_side_effects: []
+    non_goals:
+      - "{{EXPLICIT_NON_GOAL}}"
+    acceptance_criteria:
+      - "{{OBSERVABLE_CRITERION}}"
+    verification_commands:
+      - "{{EXACT_COMMAND}}"
+    required_return_fields:
+      - status
+      - files_changed
+      - commands_run
+      - evidence
+      - risks_or_unknowns
+      - recommended_next_state
+    stop_conditions:
+      - scope expansion
+      - conflicting authoritative artifacts
+      - secret or permission prompt
+      - destructive or production action not explicitly authorized

@@ -1,0 +1,21 @@
+{
+  "name": "vibe-code-platform-poc",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": ["apps/control-plane", "apps/portal"],
+  "scripts": {
+    "dev": "concurrently \"npm:dev:api\" \"npm:dev:portal\"",
+    "dev:api": "npm --workspace apps/control-plane run start:dev",
+    "dev:portal": "npm --workspace apps/portal run dev",
+    "build": "npm run build:api && npm run build:portal",
+    "build:api": "npm --workspace apps/control-plane run build",
+    "build:portal": "npm --workspace apps/portal run build",
+    "test": "npm run test:api && npm run test:portal",
+    "test:api": "npm --workspace apps/control-plane test -- --runInBand",
+    "test:portal": "npm --workspace apps/portal test -- --run",
+    "verify": "npm run build && npm test && docker compose config"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

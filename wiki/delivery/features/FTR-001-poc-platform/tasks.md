@@ -1,0 +1,109 @@
+# Vibe-Code Platform Local POC Tasks
+
+| ID | Vertical slice | Exact files | Dependencies | Owner | Status |
+|---|---|---|---|---|---|
+| TASK-001 | Authenticated ownership-scoped project API with idempotent creation | `apps/control-plane/src/**`, `apps/control-plane/test/**`, root manifests | Design PASS | human:tdd-developer | READY |
+| TASK-002 | PostgreSQL bootstrap, lifecycle, health, and Compose runtime | `docker-compose.yml`, `apps/control-plane/Dockerfile`, `apps/control-plane/src/**` | TASK-001 | human:tdd-developer | READY |
+| TASK-003 | React portal journey and failure states | `apps/portal/src/**`, `apps/portal/test/**` | TASK-001 | human:tdd-developer | READY |
+| TASK-004 | Verification, docs, and operational handoff | `README.md`, `wiki/architecture/**`, feature evidence | TASK-002, TASK-003 | human:release-verifier | READY |
+| TASK-005 | Persistent generated-app workspace, authenticated preview, and Coder template | `apps/control-plane/src/workspace/**`, `apps/control-plane/src/preview/**`, `apps/control-plane/src/auth/**`, `apps/portal/src/**`, `workspace-template/**`, `docker-compose.yml` | TASK-002, TASK-003 | human:tdd-developer | READY |
+
+## TASK-001 TDD evidence
+
+- Exact files: `apps/control-plane/src/projects/projects.service.spec.ts`, `apps/control-plane/src/projects/projects.service.ts`
+- Exact command: `npm --workspace apps/control-plane test -- --runInBand projects.service.spec.ts`
+- Expected RED failure: the focused test cannot import the missing project service before implementation.
+- Actual RED result / exit status: Focused Jest run failed with `TS2307 Cannot find module './projects.service'` (exit 1) before implementation.
+- GREEN result / exit status: Focused Jest run passed 2 tests (exit 0) after implementation.
+- Full-suite evidence: `npm run test:api` passed 1 suite / 2 tests; repository Python suite passed 72 tests.
+- Environment: Node 20, npm 10, PostgreSQL contract mocked for unit tests.
+- Artifact/link: `verification.md` live command evidence.
+- Recorded by: human:tdd-developer
+- Timestamp: 2026-08-22T09:10:45Z.
+- Commit/revision: Working tree; repository has no accessible Git metadata in this environment.
+- Dependencies: design and plan gates.
+- Risks: repository doubles can diverge from TypeORM behavior; Compose smoke verification is required.
+- Commit boundary: backend ownership/idempotency behavior only.
+
+## TASK-002 TDD evidence
+
+- Exact files: `apps/control-plane/src/health/**`, `apps/control-plane/src/seed.service.ts`, `docker-compose.yml`
+- Exact command: `npm --workspace apps/control-plane test -- --runInBand`
+- Expected RED failure: health/bootstrap contract is absent before implementation.
+- Actual RED result / exit status: Not separately captured before TASK-001; first runtime verification exposed a TypeORM metadata startup failure, which was fixed and reverified.
+- GREEN result / exit status: `docker compose up -d --build` reached healthy API and portal containers after runtime fixes (exit 0).
+- Full-suite evidence: `docker compose config` passed; live smoke journey passed health, seed, ownership, idempotency, and lifecycle checks.
+- Environment: Node 20, Docker Compose, PostgreSQL 16.
+- Artifact/link: `verification.md` live Compose evidence.
+- Recorded by: human:tdd-developer
+- Timestamp: 2026-08-22T09:10:45Z.
+- Commit/revision: Working tree; repository has no accessible Git metadata in this environment.
+- Dependencies: TASK-001.
+- Risks: startup ordering and schema bootstrap failures.
+- Commit boundary: runtime/bootstrap/lifecycle only.
+
+## TASK-003 TDD evidence
+
+- Exact files: `apps/portal/src/App.test.tsx`, `apps/portal/src/**`
+- Exact command: `npm --workspace apps/portal test -- --run`
+- Expected RED failure: portal route and ownership journey are absent before implementation.
+- Actual RED result / exit status: Vitest failed to resolve missing `./App` (exit 1) before implementation.
+- GREEN result / exit status: Focused Vitest passed 1 test and portal production build passed (exit 0).
+- Full-suite evidence: `npm test` passed backend 2 tests and frontend 1 test.
+- Environment: Node 20, npm 10, Vitest and Testing Library.
+- Artifact/link: PENDING.
+- Recorded by: human:tdd-developer
+- Timestamp: 2026-08-22T09:10:45Z.
+- Commit/revision: Working tree; repository has no accessible Git metadata in this environment.
+- Dependencies: TASK-001 API contract.
+- Risks: async UI state can regress into blank or stale screens.
+- Commit boundary: portal behavior only.
+
+## TASK-004 TDD evidence
+
+- Exact files: `README.md`, `wiki/architecture/baseline/README.md`, `wiki/delivery/features/FTR-001-poc-platform/**`
+- Exact command: `npm run verify && uv run --frozen --extra test python scripts/validate_scaffold.py && uv run --frozen --extra test pytest`
+- Expected RED failure: runtime/documentation evidence is incomplete before verification.
+- Actual RED result / exit status: Initial verification was blocked by scaffold validator scanning generated `node_modules` (exit 1); validator scope was corrected to exclude generated trees.
+- GREEN result / exit status: Scaffold validator passed 127 Markdown / 192 text files (exit 0).
+- Full-suite evidence: `npm run build`, `npm test`, `docker compose config`, scaffold validator, and Python suite all passed in their recorded runs.
+- Environment: Node 20, Docker Compose, Python 3.11+, uv.
+- Artifact/link: `verification.md` final verification matrix.
+- Recorded by: human:release-verifier
+- Timestamp: 2026-08-22T09:10:45Z.
+- Commit/revision: Working tree; repository has no accessible Git metadata in this environment.
+- Dependencies: TASK-002 and TASK-003.
+- Risks: local environment may not have a running Docker daemon.
+- Commit boundary: verification and durable docs only.
+
+## TASK-005 TDD evidence
+
+- Exact files: `apps/control-plane/src/workspace/**`, `apps/control-plane/src/preview/**`, `apps/control-plane/src/auth/**`, `apps/portal/src/App.tsx`, `workspace-template/**`
+- Exact command: `npm test -- --runInBand`
+- Expected RED failure: the focused persistence test cannot import the missing local workspace service before implementation.
+- Actual RED result / exit status: Focused Git recovery run failed because the service restored only its initial snapshot instead of the latest committed source (exit 1); focused Coder lifecycle run failed because the adapter called the unsupported `/start` path instead of the workspace-build transition endpoint (exit 1); focused provider-reflected lifecycle run failed because the service did not call `describe` after accepting a start request (exit 1); focused Coder Git mapping run failed because the configured repository was not returned in the workspace record (exit 1); focused Coder provisioning contract failed because the adapter used the organization-wide workspace path instead of the member-scoped path (exit 1), then failed because it omitted the configured template version (exit 1); owner propagation failed because the provider call omitted the seeded Coder username (exit 1); template selection failed because the request sent both a template ID and template version (exit 1); and the concurrent idempotency test failed because a PostgreSQL unique-constraint error was rethrown instead of returning the winning project (exit 1).
+- GREEN result / exit status: `npm run verify` passed 7 backend suites / 26 tests and 2 frontend suites / 9 tests; the rebuilt Compose stack passed PostgreSQL/API/portal health, seeded local login, and route-removal checks.
+- Full-suite evidence: `npm run build` passed. The rebuilt workspace image built the React/Vite frontend, preinstalled the FastAPI/SQLAlchemy runtime, and ran 2 generated-app backend tests during image build with no AI extension directory. Local named-user auth passed its production guard, unknown-user, and JWT session tests. The Kubernetes Coder template passed provider-backed Terraform validation and its shell startup scripts passed syntax checks.
+- Environment: Node 20, npm 10, Docker Compose, PostgreSQL 16.
+- Artifact/link: `verification.md` current Compose journey and `workspace-template/README.md` runtime contract.
+- Recorded by: human:tdd-developer.
+- Timestamp: 2026-08-22T09:35:00Z.
+- Commit/revision: Working tree; repository has no accessible Git metadata in this environment.
+- Dependencies: TASK-002 and TASK-003.
+- Risks: external Coder/Git/Kubernetes behavior needs operator-supplied integration evidence; local provider is the offline fallback. SSO/OIDC and AI gateway integration are explicitly out of scope.
+- Commit boundary: generated-app workspace, preview continuation, and external integration seams.
+
+- Follow-up evidence: Coder lifecycle mapping is covered by `coder-workspace.service.spec.ts`: start/stop post `transition: start|stop` to the Coder workspace-build endpoint, a successful build with a ready agent maps to `Running`, and the project detail read path refreshes persisted status from the provider rather than assuming a request succeeded.
+- Follow-up evidence: provider-unavailable project reads preserve the last lifecycle state, record a correlation ID in `lastKnownError`, and log the project/request pair; this is covered by `projects.service.spec.ts`.
+- Follow-up evidence: `auth.service.spec.ts` covers the local named-user production guard, unknown-user rejection, and JWT session contract.
+- Follow-up evidence: `projects.service.spec.ts` now verifies that a successful lifecycle request is followed by provider status refresh; a Coder build still reports `Creating` until the provider reports readiness.
+- Follow-up evidence: `coder-workspace.service.spec.ts` verifies the configured `CODER_GIT_REMOTE_URL` is surfaced as the project source mapping without storing the provider token in the project record.
+- Follow-up evidence: seeded users carry a per-user Coder username; `projects.service.spec.ts` verifies that mapping is passed to provisioning and `coder-workspace.service.spec.ts` verifies member-scoped creation uses that owner. The adapter sends exactly one of `template_id` or `template_version_id`.
+- Follow-up evidence: `projects.service.spec.ts` now verifies a newly created external workspace remains `Creating` until the provider `describe` response reports readiness; `App.test.tsx` verifies the portal waits for `Running` before opening a starting workspace.
+- Follow-up evidence: `workspace-template/golden-app/test_main.py` covers generated request create/list/update and whitespace-title rejection; the Docker image build executes those tests with its pinned runtime.
+- Follow-up evidence: `projects.service.spec.ts` covers recovery from PostgreSQL unique constraint `23505`; the live Compose race test returned HTTP 201 from both concurrent requests with one shared project ID.
+- Follow-up evidence: DTO-focused tests reject whitespace-only project names and request titles; `preview.controller.spec.ts` denies stopped previews; `local-workspace.service.spec.ts` verifies missing source-tree repair and safe preview initialization; `projects.service.spec.ts` verifies local lifecycle reflection and persisted local preview URL normalization.
+- Follow-up evidence: `projects.service.spec.ts` verifies owner project-list reads refresh provider lifecycle state; `App.test.tsx` verifies provider errors are visible on project cards with a retry action; the rebuilt Compose image passed the authenticated project-list and preview smoke at 2026-08-23T04:57:08Z.
+- Follow-up evidence: `App.test.tsx` now verifies named-user login retry and project-creation retry with the same idempotency key; `ErrorState` retry controls are explicit non-submit buttons so retries are intentional and not accidental form submissions. The rebuilt portal passed 8 tests and the authenticated Compose smoke passed at 2026-08-23T05:03:31Z.
+- Follow-up evidence: `api.test.ts` verifies array-valued Nest validation messages remain readable and retain the response request ID; the rebuilt portal passed 9 tests and the authenticated Compose smoke passed at 2026-08-23T05:07:19Z.
+- Follow-up evidence: `docker-compose.yml` now health-checks the static portal on `127.0.0.1`; after correcting the image's localhost address family, all three Compose services reported healthy and the portal HTTP smoke passed at 2026-08-23T05:10:22Z.

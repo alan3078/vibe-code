@@ -1,0 +1,157 @@
+schema_version: 1
+feature_id: "{{FEATURE_ID}}"
+title: "{{FEATURE_NAME}}"
+lifecycle_state: INTAKE
+status: DRAFT
+version: 1
+artifacts:
+  proposal: "feature.md"
+  use_cases: "use-cases.md"
+  discovery: "discovery.md"
+  design: "design.md"
+  plan: "plan.md"
+  tasks: "tasks.md"
+  acceptance: "acceptance.md"
+  verification: "verification.md"
+  reviews: "reviews.md"
+  retrospective: "retrospective.md"
+  delegations: "delegations.yaml"
+  exceptions: "exceptions.json"
+adr_assessment:
+  required: false
+  rationale: "TBD — owner must decide before DESIGN exit"
+owners:
+  orchestrator: unassigned
+  product_manager: unassigned
+  discovery_analyst: unassigned
+  architect: unassigned
+  implementation_planner: unassigned
+  implementer: unassigned
+  debugger: unassigned
+  test_specialist: unassigned
+  spec_reviewer: unassigned
+  quality_reviewer: unassigned
+  security_reviewer: unassigned
+  accessibility_reviewer: unassigned
+  operational_readiness_reviewer: unassigned
+  verifier: unassigned
+  knowledge_curator: unassigned
+evidence:
+  tdd_cycles: "tasks.md#task-001-tdd-evidence"
+  full_suite: "verification.md"
+  verification: "verification.md"
+# EXCEPTED requires exception_id to reference a matching, valid exceptions.json record.
+# NOT_APPLICABLE is valid only for the two conditional review gates.
+gates:
+  proposal:
+    owner: unassigned
+    checked_inputs: []
+    result: PENDING
+    evidence: []
+    failure_reason: null
+    exception_id: null
+    next_transition: DISCOVERY
+  discovery:
+    owner: unassigned
+    checked_inputs: []
+    result: PENDING
+    evidence: []
+    failure_reason: null
+    exception_id: null
+    next_transition: DESIGN
+  design:
+    owner: unassigned
+    checked_inputs: []
+    result: PENDING
+    evidence: []
+    failure_reason: null
+    exception_id: null
+    next_transition: PLANNED
+  plan:
+    owner: unassigned
+    checked_inputs: []
+    result: PENDING
+    evidence: []
+    failure_reason: null
+    exception_id: null
+    next_transition: IMPLEMENTING
+  tdd:
+    owner: unassigned
+    checked_inputs: []
+    result: PENDING
+    evidence: []
+    failure_reason: null
+    exception_id: null
+    next_transition: SPEC_REVIEW
+  spec_review:
+    owner: unassigned
+    checked_inputs: []
+    result: PENDING
+    evidence: []
+    failure_reason: null
+    exception_id: null
+    next_transition: QUALITY_SECURITY_REVIEW
+  quality_review:
+    owner: unassigned
+    checked_inputs: []
+    result: PENDING
+    evidence: []
+    failure_reason: null
+    exception_id: null
+    next_transition: QUALITY_SECURITY_REVIEW
+  security_review:
+    owner: unassigned
+    checked_inputs: []
+    result: PENDING
+    evidence: []
+    failure_reason: null
+    exception_id: null
+    next_transition: VERIFYING
+  accessibility_review:
+    applicability: UNASSESSED
+    owner: unassigned
+    checked_inputs: []
+    result: PENDING
+    evidence: []
+    not_applicable_rationale: null
+    failure_reason: null
+    exception_id: null
+    next_transition: VERIFYING
+  operational_readiness_review:
+    applicability: UNASSESSED
+    owner: unassigned
+    checked_inputs: []
+    result: PENDING
+    evidence: []
+    not_applicable_rationale: null
+    failure_reason: null
+    exception_id: null
+    next_transition: VERIFYING
+  verification:
+    owner: unassigned
+    checked_inputs: []
+    result: PENDING
+    evidence: []
+    failure_reason: null
+    exception_id: null
+    next_transition: RELEASE_READY
+  release:
+    owner: unassigned
+    checked_inputs: []
+    result: PENDING
+    evidence: []
+    failure_reason: null
+    exception_id: null
+    next_transition: RELEASED
+post_release:
+  released_revision: null
+  retrospective: "retrospective.md"
+  documentation_candidate_revision: null
+  knowledge_writeback: null
+  closure_evidence: null
+blocker:
+  reason: null
+  resolver: null
+  resume_state: null
+  evidence: []
+exceptions_file: exceptions.json

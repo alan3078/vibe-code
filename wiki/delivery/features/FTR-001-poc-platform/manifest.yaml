@@ -1,0 +1,155 @@
+schema_version: 1
+feature_id: "FTR-001-poc-platform"
+title: "Vibe-Code Platform Local POC"
+lifecycle_state: IMPLEMENTING
+status: IN_PROGRESS
+version: 1
+artifacts:
+  proposal: "feature.md"
+  use_cases: "use-cases.md"
+  discovery: "discovery.md"
+  design: "design.md"
+  plan: "plan.md"
+  tasks: "tasks.md"
+  acceptance: "acceptance.md"
+  verification: "verification.md"
+  reviews: "reviews.md"
+  retrospective: "retrospective.md"
+  delegations: "delegations.yaml"
+  exceptions: "exceptions.json"
+adr_assessment:
+  required: true
+  rationale: "The requested stack creates a new deployable monorepo boundary, database/runtime contract, and deferred identity/workspace integration seam; ADR-0001 records the local POC decision."
+owners:
+  orchestrator: "human:requester"
+  product_manager: "human:product-owner"
+  discovery_analyst: "codex:discovery"
+  architect: "codex:architect"
+  implementation_planner: "codex:planner"
+  implementer: "codex:tdd-implementer"
+  debugger: "codex:debugger"
+  test_specialist: "codex:test-specialist"
+  spec_reviewer: "human:spec-reviewer"
+  quality_reviewer: "human:quality-reviewer"
+  security_reviewer: "human:security-reviewer"
+  accessibility_reviewer: "human:accessibility-reviewer"
+  operational_readiness_reviewer: "human:operations-reviewer"
+  verifier: "human:release-verifier"
+  knowledge_curator: "human:knowledge-curator"
+evidence:
+  tdd_cycles: "tasks.md#task-001-tdd-evidence"
+  full_suite: "verification.md"
+  verification: "verification.md"
+gates:
+  proposal:
+    owner: "human:product-owner"
+    checked_inputs: ["feature.md", "use-cases.md"]
+    result: PASS
+    evidence: ["feature.md", "use-cases.md"]
+    failure_reason: null
+    exception_id: null
+    next_transition: DISCOVERY
+  discovery:
+    owner: "codex:discovery"
+    checked_inputs: ["discovery.md"]
+    result: PASS
+    evidence: ["discovery.md"]
+    failure_reason: null
+    exception_id: null
+    next_transition: DESIGN
+  design:
+    owner: "codex:architect"
+    checked_inputs: ["design.md", "acceptance.md"]
+    result: PASS
+    evidence: ["design.md", "acceptance.md"]
+    failure_reason: null
+    exception_id: null
+    next_transition: PLANNED
+  plan:
+    owner: "codex:planner"
+    checked_inputs: ["plan.md", "tasks.md"]
+    result: PASS
+    evidence: ["plan.md", "tasks.md"]
+    failure_reason: null
+    exception_id: null
+    next_transition: IMPLEMENTING
+  tdd:
+    owner: "codex:tdd-implementer"
+    checked_inputs: ["tasks.md#task-001-tdd-evidence", "tasks.md#task-003-tdd-evidence", "tasks.md#task-005-tdd-evidence"]
+    result: PASS
+    evidence: ["tasks.md#task-001-tdd-evidence", "tasks.md#task-003-tdd-evidence", "tasks.md#task-005-tdd-evidence"]
+    failure_reason: null
+    exception_id: null
+    next_transition: SPEC_REVIEW
+  spec_review:
+    owner: "human:spec-reviewer"
+    checked_inputs: []
+    result: PENDING
+    evidence: []
+    failure_reason: null
+    exception_id: null
+    next_transition: QUALITY_SECURITY_REVIEW
+  quality_review:
+    owner: "human:quality-reviewer"
+    checked_inputs: []
+    result: PENDING
+    evidence: []
+    failure_reason: null
+    exception_id: null
+    next_transition: QUALITY_SECURITY_REVIEW
+  security_review:
+    owner: "human:security-reviewer"
+    checked_inputs: []
+    result: PENDING
+    evidence: []
+    failure_reason: null
+    exception_id: null
+    next_transition: VERIFYING
+  accessibility_review:
+    applicability: APPLICABLE
+    owner: "human:accessibility-reviewer"
+    checked_inputs: ["design.md"]
+    result: PENDING
+    evidence: ["reviews.md#accessibility-review"]
+    not_applicable_rationale: null
+    failure_reason: null
+    exception_id: null
+    next_transition: VERIFYING
+  operational_readiness_review:
+    applicability: APPLICABLE
+    owner: "human:operations-reviewer"
+    checked_inputs: ["design.md"]
+    result: PENDING
+    evidence: ["reviews.md#operational-readiness-review"]
+    not_applicable_rationale: null
+    failure_reason: null
+    exception_id: null
+    next_transition: VERIFYING
+  verification:
+    owner: "human:release-verifier"
+    checked_inputs: []
+    result: PENDING
+    evidence: []
+    failure_reason: null
+    exception_id: null
+    next_transition: RELEASE_READY
+  release:
+    owner: "human:product-owner"
+    checked_inputs: []
+    result: PENDING
+    evidence: []
+    failure_reason: null
+    exception_id: null
+    next_transition: RELEASED
+post_release:
+  released_revision: null
+  retrospective: "retrospective.md"
+  documentation_candidate_revision: null
+  knowledge_writeback: null
+  closure_evidence: null
+blocker:
+  reason: null
+  resolver: null
+  resume_state: null
+  evidence: []
+exceptions_file: exceptions.json

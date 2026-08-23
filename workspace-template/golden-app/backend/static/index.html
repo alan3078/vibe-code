@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Internal Request Tracker</title>
+    <style>body{font:16px system-ui;max-width:760px;margin:48px auto;padding:0 20px;color:#202022}form{display:grid;gap:12px;max-width:480px}input,textarea,button{font:inherit;padding:10px}li{margin:12px 0}</style>
+  </head>
+  <body>
+    <h1>Internal Request Tracker</h1>
+    <p>Generated from the React/Vite + Python/FastAPI template.</p>
+    <form id="request-form"><input id="title" required maxlength="160" placeholder="What needs attention?" /><textarea id="description" placeholder="Details"></textarea><button>Create request</button></form>
+    <ul id="requests"></ul>
+    <script>
+      const list = document.querySelector('#requests');
+      async function refresh() { const response = await fetch('/api/requests'); const items = await response.json(); list.innerHTML = items.map(item => `<li><strong>${item.title}</strong> — ${item.status}<br><small>${item.description || ''}</small></li>`).join(''); }
+      document.querySelector('#request-form').addEventListener('submit', async event => { event.preventDefault(); await fetch('/api/requests', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({title: document.querySelector('#title').value, description: document.querySelector('#description').value}) }); event.target.reset(); await refresh(); });
+      refresh();
+    </script>
+  </body>
+</html>
