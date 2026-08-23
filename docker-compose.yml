@@ -5,8 +5,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-vibe_platform}
       POSTGRES_USER: ${POSTGRES_USER:-vibe}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vibe}
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -21,9 +19,11 @@ services:
       dockerfile: apps/control-plane/Dockerfile
     environment:
       NODE_ENV: ${NODE_ENV:-development}
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-false}
       PORT: 3000
       DATABASE_URL: postgres://${POSTGRES_USER:-vibe}:${POSTGRES_PASSWORD:-vibe}@postgres:5432/${POSTGRES_DB:-vibe_platform}
       JWT_SECRET: ${JWT_SECRET:-local-poc-only-change-me}
+      LOCAL_DEMO_AUTH: "true"
       PORTAL_ORIGIN: http://localhost:5173
       WORKSPACE_PROVIDER: ${WORKSPACE_PROVIDER:-local}
       WORKSPACE_ROOT: /var/lib/vibe/workspaces
@@ -40,7 +40,7 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     volumes:
       - workspace_data:/var/lib/vibe/workspaces
     healthcheck:
@@ -59,7 +59,7 @@ services:
       control-plane:
         condition: service_healthy
     ports:
-      - "${CODE_SERVER_PORT:-8080}:8080"
+      - "127.0.0.1:${CODE_SERVER_PORT:-8080}:8080"
     volumes:
       - workspace_data:/workspaces
     healthcheck:
@@ -80,7 +80,7 @@ services:
       workspace-ide:
         condition: service_healthy
     ports:
-      - "5173:80"
+      - "127.0.0.1:5173:80"
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
       interval: 5s

@@ -12,8 +12,8 @@ export class AuthService {
   ) {}
 
   async demoLogin(userId: string) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new ForbiddenException('Demo login is disabled in production');
+    if (process.env.LOCAL_DEMO_AUTH !== 'true' || process.env.NODE_ENV !== 'development') {
+      throw new ForbiddenException('Demo login is disabled. Configure a real identity provider for shared deployments.');
     }
     const user = await this.userRepository.findOneBy({ id: userId });
     if (!user) {
@@ -27,11 +27,11 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    return { id: user.id, name: user.name, email: user.email };
+    return { id: user.id, name: user.name, email: user.email, role: user.role };
   }
 
   private async issueSession(user: User) {
-    const profile = { id: user.id, name: user.name, email: user.email };
-    return { token: await this.jwtService.signAsync({ sub: user.id, email: user.email, name: user.name }), user: profile };
+    const profile = { id: user.id, name: user.name, email: user.email, role: user.role };
+    return { token: await this.jwtService.signAsync({ sub: user.id, email: user.email, name: user.name, role: user.role }), user: profile };
   }
 }

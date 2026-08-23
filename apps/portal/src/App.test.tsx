@@ -28,6 +28,53 @@ describe('portal entry journey', () => {
     expect(window.sessionStorage.getItem('vibe-user')).toBeNull();
   });
 
+  it('shows the administrator control panel only for an administrator session', async () => {
+    window.sessionStorage.setItem('vibe-token', 'test-token');
+    window.sessionStorage.setItem('vibe-user', JSON.stringify({ id: 'admin-1', name: 'Avery Morgan', email: 'avery.admin@example.test', role: 'Administrator' }));
+    window.history.pushState({}, '', '/admin');
+    vi.spyOn(api, 'adminOverview').mockResolvedValue({ projects: 1, creating: 0, running: 1, stopped: 0, failed: 0 });
+    vi.spyOn(api, 'adminProjectPage').mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 });
+    vi.spyOn(api, 'configurationPage').mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 });
+    vi.spyOn(api, 'configurationGroupPage').mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 });
+    vi.spyOn(api, 'auditPage').mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 });
+    const administrator = { id: 'admin-1', name: 'Avery Morgan', email: 'avery.admin@example.test', role: 'Administrator' as const };
+    vi.spyOn(api, 'userPage').mockResolvedValue({ items: [administrator], total: 1, page: 1, pageSize: 20 });
+    vi.spyOn(api, 'listRoles').mockResolvedValue([]);
+    const updateUserRole = vi.spyOn(api, 'updateUserRole').mockResolvedValue({ ...administrator, role: 'Member' });
+    const adminCreateProject = vi.spyOn(api, 'adminCreateProject').mockResolvedValue({ id: 'project-admin', name: 'Admin-created app', status: 'Creating' } as Project);
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: /overview/i })).toBeInTheDocument();
+    expect(screen.getByText('Administrator')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /users & roles/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^configuration$/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /configuration groups/i })).not.toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('button', { name: /^projects$/i }));
+    expect(await screen.findByRole('button', { name: /create project/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/project name/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/owner name or email/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/project status/i)).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('button', { name: /advanced search/i }));
+    expect(screen.getByLabelText(/workspace id/i)).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('button', { name: /create project/i }));
+    await screen.findByRole('combobox', { name: /project owner/i });
+    await userEvent.setup().type(screen.getByLabelText(/new project name/i), 'Admin-created app');
+    await userEvent.setup().click(screen.getByRole('button', { name: /^create project$/i }));
+    await vi.waitFor(() => expect(adminCreateProject).toHaveBeenCalledWith(expect.objectContaining({ ownerId: 'admin-1', name: 'Admin-created app' }), expect.any(String)));
+    await userEvent.setup().click(screen.getByRole('button', { name: /users & roles/i }));
+    expect(await screen.findByRole('columnheader', { name: /^user$/i })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: /^role$/i })).toBeInTheDocument();
+    const userPageCalls = vi.mocked(api.userPage).mock.calls.length;
+    await userEvent.setup().selectOptions(screen.getByRole('combobox', { name: /role for avery morgan/i }), 'Member');
+    await vi.waitFor(() => expect(updateUserRole).toHaveBeenCalledWith('admin-1', 'Member'));
+    await vi.waitFor(() => expect(vi.mocked(api.userPage).mock.calls.length).toBeGreaterThan(userPageCalls));
+    await userEvent.setup().click(screen.getByRole('button', { name: /audit log/i }));
+    expect(await screen.findByRole('columnheader', { name: /date\/time/i })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: /^user$/i })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: /actor type/i })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: /user role/i })).toBeInTheDocument();
+  });
+
   it('retries a failed named-user login', async () => {
     window.sessionStorage.clear();
     const demoLogin = vi.spyOn(api, 'demoLogin')

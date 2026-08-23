@@ -30,6 +30,15 @@ describe('LocalWorkspaceService', () => {
     expect(snapshot.sourceFiles).toContain('.clinerules');
     expect(snapshot.sourceFiles).toContain('.github');
     expect(snapshot.sourceFiles).not.toContain('main.py');
+    await expect(readFile(join(root, workspace.workspaceId, 'source', '.github', 'skills', 'implementation-minimality', 'SKILL.md'), 'utf8'))
+      .resolves.toContain('Implementation Minimality');
+    await expect(readFile(join(root, workspace.workspaceId, 'source', '.github', 'skills', 'visual-browser-qa', 'SKILL.md'), 'utf8'))
+      .resolves.toContain('Visual Browser QA');
+    await expect(git.listFiles({ fs: nodeFs, dir: join(root, workspace.workspaceId, 'source') }))
+      .resolves.toEqual(expect.arrayContaining([
+        '.github/skills/implementation-minimality/SKILL.md',
+        '.github/skills/visual-browser-qa/SKILL.md',
+      ]));
     await expect(service.listRequests(workspace.workspaceId)).resolves.toEqual([]);
   });
 
@@ -46,10 +55,14 @@ describe('LocalWorkspaceService', () => {
     expect(records).toEqual([{ ...created, status: 'Open' }]);
   });
 
-  it('initializes a missing workspace directory before listing preview records', async () => {
+  it('does not recreate a deleted workspace when it is queried or stopped', async () => {
     const service = new LocalWorkspaceService(root);
+    const workspace = await service.provision('deleted-project', 'Deleted project');
+    await service.delete(workspace.workspaceId);
 
-    await expect(service.listRequests('local-missing-project')).resolves.toEqual([]);
+    await expect(service.listRequests(workspace.workspaceId)).rejects.toThrow('Workspace not found');
+    await expect(service.stop(workspace.workspaceId)).rejects.toThrow('Workspace not found');
+    expect(nodeFs.existsSync(join(root, workspace.workspaceId))).toBe(false);
   });
 
   it('repairs a missing source tree when a persisted workspace is resumed', async () => {

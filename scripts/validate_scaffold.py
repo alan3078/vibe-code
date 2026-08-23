@@ -425,7 +425,7 @@ def find_forbidden(text: str) -> list[str]:
 
 def collect_text_files() -> list[tuple[Path, str]]:
     """Read repository text files while excluding generated and VCS state."""
-    excluded = {".git", ".venv", ".pytest_cache", "__pycache__", "node_modules", "dist", "build", ".vite"}
+    excluded = {".git", ".venv", ".pytest_cache", "__pycache__", "node_modules", "dist", "build", ".vite", ".terraform"}
     files: list[tuple[Path, str]] = []
     for path in ROOT.rglob("*"):
         if not path.is_file() or excluded.intersection(path.parts):

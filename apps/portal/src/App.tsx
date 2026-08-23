@@ -1,6 +1,7 @@
 import { FormEvent, ReactNode, useEffect, useState } from 'react';
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { api, ApiError, Project, RequestRecord, seededUsers, User } from './api';
+import { AdminPage } from './AdminPage';
 import './styles.css';
 
 const storedUser = () => {
@@ -29,7 +30,7 @@ function ErrorState({ error, onRetry }: { error: unknown; onRetry: () => void })
 export async function waitForProjectRunning(id: string, initial: Project): Promise<Project> {
   let current = initial;
   const deadline = Date.now() + 4 * 60 * 1000;
-  while (current.status === 'Creating' && Date.now() < deadline) {
+  while ((current.status === 'Creating' || current.status === 'Starting') && Date.now() < deadline) {
     await new Promise((resolve) => window.setTimeout(resolve, 800));
     current = await api.getProject(id);
   }
@@ -44,8 +45,9 @@ function Shell({ user, onLogout, children }: { user: User; onLogout: () => void;
       <Link to="/projects" className="brand"><span className="brand-mark">✦</span><span>vibe<span className="brand-muted">/code</span></span></Link>
       <nav className="topnav" aria-label="Primary navigation">
         <Link className={location.pathname.startsWith('/projects') ? 'active' : ''} to="/projects">My projects</Link>
+        {user.role === 'Administrator' ? <Link className={location.pathname.startsWith('/admin') ? 'active' : ''} to="/admin">Administration</Link> : null}
       </nav>
-      <div className="profile-menu"><span className="avatar">{user.name.split(' ').map((part) => part[0]).join('')}</span><span className="profile-name">{user.name}</span><button className="logout" onClick={onLogout}>Log out</button></div>
+      <div className="profile-menu"><span className="avatar">{user.name.split(' ').map((part) => part[0]).join('')}</span><span className="profile-name">{user.name}</span><span className="user-role">{user.role || 'Member'}</span><button className="logout" onClick={onLogout}>Log out</button></div>
     </header>
     <main className="page-content">{children}</main>
   </div>;
@@ -100,7 +102,7 @@ function ProjectCard({ project, onChanged }: { project: Project; onChanged: (pro
     <div className="project-meta"><span>Template {project.template.version}</span><span>{project.lastOpenedAt ? `Opened ${new Date(project.lastOpenedAt).toLocaleDateString()}` : 'Not opened yet'}</span></div>
     {error && <small className="card-error">{error}</small>}
     {project.lastKnownError && <div className="card-provider-error" role="alert"><small>{project.lastKnownError}</small><button className="text-button" disabled={busy} onClick={() => void retry()}>{busy ? 'Retrying…' : 'Retry'}</button></div>}
-    <div className="card-actions"><Link className="card-action" to={`/projects/${project.id}`}>Open Workspace <span>→</span></Link><button className="text-button" disabled={busy || project.status === 'Creating'} onClick={() => void toggleLifecycle()}>{busy ? 'Working…' : project.status === 'Stopped' || project.status === 'Failed' ? 'Start' : project.status === 'Creating' ? 'Creating…' : 'Stop'}</button></div>
+    <div className="card-actions"><Link className="card-action" to={`/projects/${project.id}`}>Open Workspace <span>→</span></Link><button className="text-button" disabled={busy || ['Creating', 'Starting', 'Stopping', 'Deleting', 'Deleted'].includes(project.status)} onClick={() => void toggleLifecycle()}>{busy ? 'Working…' : project.status === 'Stopped' || project.status === 'Failed' ? 'Start' : project.status === 'Creating' ? 'Creating…' : project.status === 'Starting' ? 'Starting…' : project.status === 'Stopping' ? 'Stopping…' : project.status === 'Deleting' ? 'Deleting…' : 'Stop'}</button></div>
   </article>;
 }
 
@@ -153,22 +155,35 @@ function ProjectDetailPage() {
   const [loading, setLoading] = useState(true);
   const [action, setAction] = useState<'start' | 'stop' | null>(null);
   const [error, setError] = useState<unknown>(null);
+  const [deleted, setDeleted] = useState(false);
   const load = async () => { if (!id) return; setLoading(true); setError(null); try { setProject(await api.getProject(id)); } catch (caught) { setError(caught); } finally { setLoading(false); } };
   useEffect(() => { void load(); }, [id]);
   useEffect(() => {
-    if (!id || project?.status !== 'Creating') return;
-    const timer = window.setInterval(() => { void api.getProject(id).then(setProject).catch(setError); }, 800);
+    if (!id || !project || !['Creating', 'Starting', 'Stopping', 'Deleting'].includes(project.status)) return;
+    const timer = window.setInterval(() => { void api.getProject(id).then(setProject).catch((caught) => {
+      if (project.status === 'Deleting' && caught instanceof ApiError && caught.status === 404) {
+        setDeleted(true);
+        window.clearInterval(timer);
+        return;
+      }
+      setError(caught);
+    }); }, 800);
     return () => window.clearInterval(timer);
   }, [id, project?.status]);
   const lifecycle = async (next: 'start' | 'stop') => { if (!id) return; setAction(next); setError(null); try { setProject(await api.setLifecycle(id, next)); } catch (caught) { setError(caught); } finally { setAction(null); } };
+  const remove = async () => {
+    if (!id || !project || !window.confirm(`Delete “${project.name}”? The workspace volume and local preview data will be removed.`)) return;
+    setAction('stop'); setError(null);
+    try { setProject(await api.deleteProject(id)); } catch (caught) { setError(caught); } finally { setAction(null); }
+  };
   const openWorkspace = async () => {
     const current = project;
-    if (!id || !current || current.status === 'Creating') return;
+    if (!id || !current || ['Creating', 'Starting', 'Stopping', 'Deleting', 'Deleted'].includes(current.status)) return;
     setError(null);
     setAction('start');
     try {
       let ready = current.status === 'Running' ? current : await api.setLifecycle(id, 'start');
-      if (ready.status === 'Creating') ready = await waitForProjectRunning(id, ready);
+      if (ready.status === 'Creating' || ready.status === 'Starting') ready = await waitForProjectRunning(id, ready);
       setProject(ready);
       const target = ready.workspaceUrl || `/workspaces/${ready.id}`;
       if (target.startsWith('http')) window.location.assign(target);
@@ -180,10 +195,12 @@ function ProjectDetailPage() {
     }
   };
   if (loading) return <div className="loading-card"><span className="spinner" />Opening project…</div>;
+  if (deleted) return <div className="empty-card"><div className="empty-art"><span>✓</span></div><h1>Project deleted</h1><p>The workspace volume and local preview data have been removed.</p><button className="button button-primary" onClick={() => navigate('/projects')}>Return to my projects</button></div>;
   if (error || !project) return <><Link to="/projects" className="back-link">← Back to my projects</Link><ErrorState error={error || new Error('Project not found.')} onRetry={() => void load()} /></>;
+  const transitionPending = ['Creating', 'Starting', 'Stopping', 'Deleting'].includes(project.status);
   const frontendTarget = project.frontendPreviewUrl || `/preview/${project.id}`;
   const frontendExternal = frontendTarget.startsWith('http') && !frontendTarget.includes('localhost:5173/preview/');
-  return <div className="detail-page"><Link to="/projects" className="back-link">← Back to my projects</Link><div className="detail-heading"><div><div className="detail-title"><div className="project-symbol large">{project.name.slice(0, 1).toUpperCase()}</div><div><p className="eyebrow">PROJECT</p><h1>{project.name}</h1></div></div><p className="muted detail-description">{project.description || 'No description yet.'}</p></div><div className="detail-actions"><StatusPill status={project.status} />{project.status === 'Stopped' || project.status === 'Failed' ? <button className="button button-primary" disabled={!!action} onClick={() => void lifecycle('start')}>{action === 'start' ? 'Starting…' : 'Start workspace'}</button> : <button className="button button-secondary" disabled={!!action || project.status === 'Creating'} onClick={() => void lifecycle('stop')}>{action === 'stop' ? 'Stopping…' : project.status === 'Creating' ? 'Creating…' : 'Stop workspace'}</button>}</div></div>{error ? <ErrorState error={error} onRetry={() => setError(null)} /> : null}{project.lastKnownError && <div className="error-card" role="alert"><div className="error-icon">!</div><div><strong>Workspace provisioning failed.</strong><p>{project.lastKnownError}</p></div><button className="button button-secondary" onClick={() => void lifecycle('start')}>Retry</button></div>}<div className="detail-grid"><section className="detail-main"><div className="section-heading"><div><p className="eyebrow">WORKSPACE</p><h2>Ready when you are</h2></div><span className="live-indicator"><span />{project.status === 'Running' ? 'Workspace online' : project.status === 'Creating' ? 'Provisioning workspace' : 'Workspace paused'}</span></div><div className="workspace-card"><div className="workspace-visual"><div className="window-dots"><i /><i /><i /></div><div className="code-lines"><span /><span /><span className="short" /><span /><span className="medium" /></div></div><div className="workspace-copy"><h3>Real code-server IDE</h3><p>Open the VS Code-compatible browser IDE for this project. Your edits are saved in the persistent workspace volume.</p><button className={`button button-primary ${project.status === 'Creating' ? 'disabled-link' : ''}`} disabled={!!action || project.status === 'Creating'} onClick={() => void openWorkspace()}>{action === 'start' ? 'Starting…' : 'Open code-server IDE'} <span>↗</span></button></div></div><div className="section-heading preview-heading"><div><p className="eyebrow">PREVIEWS</p><h2>See your project live</h2></div></div><div className="preview-grid">{project.status === 'Running' ? frontendExternal ? <a className="preview-card" href={frontendTarget} target="_blank" rel="noreferrer"><span className="preview-icon">▣</span><span><strong>Frontend preview</strong><small>Authenticated request tracker</small></span><span>↗</span></a> : <Link className="preview-card" to={`/preview/${project.id}`}><span className="preview-icon">▣</span><span><strong>Frontend preview</strong><small>Authenticated request tracker</small></span><span>↗</span></Link> : <span className="preview-card disabled"><span className="preview-icon">▣</span><span><strong>Frontend preview</strong><small>Available while workspace is running</small></span><span>↗</span></span>}<a className={`preview-card ${project.status !== 'Running' ? 'disabled' : ''}`} href={project.status === 'Running' ? project.apiPreviewUrl : undefined} target="_blank" rel="noreferrer"><span className="preview-icon purple">⌁</span><span><strong>API preview</strong><small>Authenticated request API</small></span><span>↗</span></a></div></section><aside className="detail-sidebar"><div className="sidebar-card"><p className="eyebrow">PROJECT PASSPORT</p><dl><div><dt>Template</dt><dd>{project.template.name}</dd></div><div><dt>Version</dt><dd>{project.template.version}</dd></div><div><dt>Workspace</dt><dd className="mono">{project.workspaceId}</dd></div><div><dt>Workspace URL</dt><dd className="mono">{project.workspaceUrl || 'Not available'}</dd></div><div><dt>Source</dt><dd>{project.sourceRepository || 'Not connected yet'}</dd></div><div><dt>Commit</dt><dd className="mono">{project.currentCommit || 'No commits yet'}</dd></div></dl></div><div className="sidebar-card next-card"><span className="next-icon">✦</span><h3>Make it yours</h3><p>Open code-server, review the source, and use Cline with your own configured model provider if desired.</p><span className="muted small">No platform AI gateway is included in this POC.</span></div></aside></div><button className="text-button" onClick={() => navigate('/projects')}>← Return to all projects</button></div>;
+  return <div className="detail-page"><Link to="/projects" className="back-link">← Back to my projects</Link><div className="detail-heading"><div><div className="detail-title"><div className="project-symbol large">{project.name.slice(0, 1).toUpperCase()}</div><div><p className="eyebrow">PROJECT</p><h1>{project.name}</h1></div></div><p className="muted detail-description">{project.description || 'No description yet.'}</p></div><div className="detail-actions"><StatusPill status={project.status} />{project.status === 'Stopped' || project.status === 'Failed' ? <button className="button button-primary" disabled={!!action} onClick={() => void lifecycle('start')}>{action === 'start' ? 'Starting…' : 'Start workspace'}</button> : <button className="button button-secondary" disabled={!!action || transitionPending || project.status === 'Deleted'} onClick={() => void lifecycle('stop')}>{project.status === 'Creating' ? 'Creating…' : project.status === 'Starting' ? 'Starting…' : project.status === 'Stopping' ? 'Stopping…' : project.status === 'Deleting' ? 'Deleting…' : 'Stop workspace'}</button>}<button className="text-button danger-button" disabled={!!action || project.status === 'Deleting' || project.status === 'Deleted'} onClick={() => void remove()}>Delete project</button></div></div>{error ? <ErrorState error={error} onRetry={() => setError(null)} /> : null}{project.lastKnownError && <div className="error-card" role="alert"><div className="error-icon">!</div><div><strong>Workspace provisioning failed.</strong><p>{project.lastKnownError}</p></div><button className="button button-secondary" onClick={() => void lifecycle('start')}>Retry</button></div>}<div className="detail-grid"><section className="detail-main"><div className="section-heading"><div><p className="eyebrow">WORKSPACE</p><h2>Ready when you are</h2></div><span className="live-indicator"><span />{project.status === 'Running' ? 'Workspace online' : project.status === 'Creating' || project.status === 'Starting' ? 'Provisioning workspace' : project.status === 'Stopping' ? 'Stopping workspace' : project.status === 'Deleting' ? 'Deleting workspace' : 'Workspace paused'}</span></div><div className="workspace-card"><div className="workspace-visual"><div className="window-dots"><i /><i /><i /></div><div className="code-lines"><span /><span /><span className="short" /><span /><span className="medium" /></div></div><div className="workspace-copy"><h3>Real code-server IDE</h3><p>Open the VS Code-compatible browser IDE for this project. Your edits are saved in the persistent workspace volume.</p><button className={`button button-primary ${transitionPending || project.status === 'Deleted' ? 'disabled-link' : ''}`} disabled={!!action || transitionPending || project.status === 'Deleted'} onClick={() => void openWorkspace()}>{action === 'start' ? 'Starting…' : 'Open code-server IDE'} <span>↗</span></button></div></div><div className="section-heading preview-heading"><div><p className="eyebrow">PREVIEWS</p><h2>See your project live</h2></div></div><div className="preview-grid">{project.status === 'Running' ? frontendExternal ? <a className="preview-card" href={frontendTarget} target="_blank" rel="noreferrer"><span className="preview-icon">▣</span><span><strong>Frontend preview</strong><small>Authenticated request tracker</small></span><span>↗</span></a> : <Link className="preview-card" to={`/preview/${project.id}`}><span className="preview-icon">▣</span><span><strong>Frontend preview</strong><small>Authenticated request tracker</small></span><span>↗</span></Link> : <span className="preview-card disabled"><span className="preview-icon">▣</span><span><strong>Frontend preview</strong><small>Available while workspace is running</small></span><span>↗</span></span>}<a className={`preview-card ${project.status !== 'Running' ? 'disabled' : ''}`} href={project.status === 'Running' ? project.apiPreviewUrl : undefined} target="_blank" rel="noreferrer"><span className="preview-icon purple">⌁</span><span><strong>API preview</strong><small>Authenticated request API</small></span><span>↗</span></a></div></section><aside className="detail-sidebar"><div className="sidebar-card"><p className="eyebrow">PROJECT PASSPORT</p><dl><div><dt>Template</dt><dd>{project.template.name}</dd></div><div><dt>Version</dt><dd>{project.template.version}</dd></div><div><dt>Workspace</dt><dd className="mono">{project.workspaceId}</dd></div><div><dt>Workspace URL</dt><dd className="mono">{project.workspaceUrl || 'Not available'}</dd></div><div><dt>Source</dt><dd>{project.sourceRepository || 'Not connected yet'}</dd></div><div><dt>Commit</dt><dd className="mono">{project.currentCommit || 'No commits yet'}</dd></div></dl></div><div className="sidebar-card next-card"><span className="next-icon">✦</span><h3>Make it yours</h3><p>Open code-server, review the source, and use Cline with your own configured model provider if desired.</p><span className="muted small">No platform AI gateway is included in this POC.</span></div></aside></div><button className="text-button" onClick={() => navigate('/projects')}>← Return to all projects</button></div>;
 }
 
 function ApiPreviewPage() {
@@ -228,7 +245,7 @@ function PreviewPage() {
 }
 
 function AuthenticatedApp({ user, onLogout }: { user: User; onLogout: () => void }) {
-  return <Shell user={user} onLogout={onLogout}><Routes><Route path="/projects" element={<ProjectsPage />} /><Route path="/projects/new" element={<CreateProjectPage />} /><Route path="/projects/:id" element={<ProjectDetailPage />} /><Route path="/workspaces/:id" element={<WorkspacePage />} /><Route path="/preview/:id" element={<PreviewPage />} /><Route path="/api-preview/:id" element={<ApiPreviewPage />} /><Route path="*" element={<Navigate to="/projects" replace />} /></Routes></Shell>;
+  return <Shell user={user} onLogout={onLogout}><Routes><Route path="/projects" element={<ProjectsPage />} /><Route path="/projects/new" element={<CreateProjectPage />} /><Route path="/projects/:id" element={<ProjectDetailPage />} /><Route path="/workspaces/:id" element={<WorkspacePage />} /><Route path="/preview/:id" element={<PreviewPage />} /><Route path="/api-preview/:id" element={<ApiPreviewPage />} />{user.role === 'Administrator' ? <Route path="/admin" element={<AdminPage />} /> : null}<Route path="*" element={<Navigate to="/projects" replace />} /></Routes></Shell>;
 }
 
 export function App() {

@@ -5,6 +5,7 @@ import { ProjectsService } from '../projects/projects.service';
 import { WORKSPACE_PROVIDER, WorkspaceProvider } from '../workspace/workspace-provider';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { UpdateRequestDto } from './dto/update-request.dto';
+import { Audit } from '../audit/audit.decorator';
 
 @Controller('preview/projects/:projectId/requests')
 @UseGuards(JwtAuthGuard)
@@ -15,6 +16,7 @@ export class PreviewController {
   ) {}
 
   @Get()
+  @Audit('PROJECT_PREVIEW_READ', 'Project')
   async list(@CurrentUser() user: { sub: string }, @Param('projectId') projectId: string) {
     const project = await this.projectsService.getForOwner(user.sub, projectId);
     this.assertPreviewAvailable(project.status);
@@ -22,6 +24,7 @@ export class PreviewController {
   }
 
   @Post()
+  @Audit('PROJECT_PREVIEW_REQUEST_CREATED', 'Project')
   async create(@CurrentUser() user: { sub: string }, @Param('projectId') projectId: string, @Body() dto: CreateRequestDto) {
     const project = await this.projectsService.getForOwner(user.sub, projectId);
     this.assertPreviewAvailable(project.status);
@@ -29,6 +32,7 @@ export class PreviewController {
   }
 
   @Patch(':requestId')
+  @Audit('PROJECT_PREVIEW_REQUEST_UPDATED', 'Project')
   async update(
     @CurrentUser() user: { sub: string },
     @Param('projectId') projectId: string,

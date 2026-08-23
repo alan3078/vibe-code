@@ -36,13 +36,6 @@ variable "git_remote_url" {
   description = "Optional empty Git-provider repository URL for the golden project."
 }
 
-variable "git_provider_token" {
-  type        = string
-  default     = ""
-  sensitive   = true
-  description = "Optional Git-provider token supplied through the approved Coder secret path."
-}
-
 provider "kubernetes" {
   # Authenticate through the Coder provisioner's ServiceAccount when Coder runs
   # in-cluster, or through an explicitly supplied host kubeconfig for K3s.
@@ -96,20 +89,14 @@ resource "coder_agent" "main" {
     fi
     if [ -n "$${GIT_REMOTE_URL:-}" ]; then
       git remote get-url origin >/dev/null 2>&1 || git remote add origin "$${GIT_REMOTE_URL}"
-      if [ -n "$${GIT_PROVIDER_TOKEN:-}" ] && git -c "http.extraHeader=Authorization: Bearer $${GIT_PROVIDER_TOKEN}" fetch origin main; then
-        git checkout -B main origin/main
-      elif [ -n "$${GIT_PROVIDER_TOKEN:-}" ]; then
-        git -c "http.extraHeader=Authorization: Bearer $${GIT_PROVIDER_TOKEN}" push --set-upstream origin main
-    else
-        git push --set-upstream origin main
-      fi
+      # Workspace code never receives a Git credential. Attach a user-approved
+      # credential in their Git client, or use a server-side Git broker.
     fi
     /usr/local/bin/vibe-workspace-start > /tmp/vibe-code-server.log 2>&1 &
   EOT
 
   env = {
-    GIT_REMOTE_URL      = var.git_remote_url
-    GIT_PROVIDER_TOKEN  = var.git_provider_token
+    GIT_REMOTE_URL = var.git_remote_url
   }
 }
 
@@ -126,9 +113,6 @@ resource "kubernetes_persistent_volume_claim_v1" "project" {
     name      = "${local.workspace_name}-project"
     namespace = var.namespace
     labels    = local.workspace_labels
-    annotations = {
-      "com.coder.user.email" = data.coder_workspace_owner.me.email
-    }
   }
 
   wait_until_bound = false
@@ -143,6 +127,15 @@ resource "kubernetes_persistent_volume_claim_v1" "project" {
   }
 }
 
+resource "kubernetes_service_account_v1" "workspace" {
+  metadata {
+    name      = "${local.workspace_name}-runner"
+    namespace = var.namespace
+    labels    = local.workspace_labels
+  }
+  automount_service_account_token = false
+}
+
 resource "kubernetes_deployment_v1" "workspace" {
   count      = data.coder_workspace.me.start_count
   depends_on = [kubernetes_persistent_volume_claim_v1.project]
@@ -151,9 +144,6 @@ resource "kubernetes_deployment_v1" "workspace" {
     name      = local.workspace_name
     namespace = var.namespace
     labels    = local.workspace_labels
-    annotations = {
-      "com.coder.user.email" = data.coder_workspace_owner.me.email
-    }
   }
 
   spec {
@@ -173,10 +163,15 @@ resource "kubernetes_deployment_v1" "workspace" {
       }
 
       spec {
+        automount_service_account_token = false
+        service_account_name            = kubernetes_service_account_v1.workspace.metadata[0].name
         security_context {
           run_as_user     = 1000
           run_as_non_root = true
           fs_group        = 1000
+          seccomp_profile {
+            type = "RuntimeDefault"
+          }
         }
 
         container {
@@ -184,6 +179,14 @@ resource "kubernetes_deployment_v1" "workspace" {
           image             = var.workspace_image
           image_pull_policy = "IfNotPresent"
           command           = ["sh", "-c", coder_agent.main.init_script]
+
+          security_context {
+            allow_privilege_escalation = false
+            read_only_root_filesystem  = true
+            capabilities {
+              drop = ["ALL"]
+            }
+          }
 
           env {
             name  = "CODER_AGENT_TOKEN"
@@ -210,6 +213,16 @@ resource "kubernetes_deployment_v1" "workspace" {
             name       = "project"
             mount_path = "/workspaces/project"
           }
+
+          volume_mount {
+            name       = "tmp"
+            mount_path = "/tmp"
+          }
+
+          volume_mount {
+            name       = "coder-home"
+            mount_path = "/home/coder"
+          }
         }
 
         volume {
@@ -217,6 +230,16 @@ resource "kubernetes_deployment_v1" "workspace" {
           persistent_volume_claim {
             claim_name = kubernetes_persistent_volume_claim_v1.project.metadata[0].name
           }
+        }
+
+        volume {
+          name = "tmp"
+          empty_dir {}
+        }
+
+        volume {
+          name = "coder-home"
+          empty_dir {}
         }
       }
     }

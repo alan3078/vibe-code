@@ -11,7 +11,8 @@ The scaffold has no runnable product. A named user needs a small, repeatable por
 
 ## Actors
 
-- Named POC user: signs in, views owned projects, creates a project, and starts/stops/opens it.
+- Member: signs in, views owned projects, creates a project, and starts/stops/deletes/opens it.
+- Administrator: manages platform resource policy, views governed project state, and reviews audit events.
 - Platform engineer: runs the local Compose stack and inspects health/logs.
 - Workspace operator: supplies Coder configuration for the cluster-backed path.
 - Human product owner: approves the local POC scope and later approves external integrations.
@@ -27,13 +28,14 @@ The scaffold has no runnable product. A named user needs a small, repeatable por
 - Authenticated preview API and portal request-tracker journey using seeded local named-user identity.
 - Docker Compose for PostgreSQL, control plane, and portal.
 - Loading, empty, error, retry, and stopped/running states.
+- Governed asynchronous workspace transitions, configurable active-workspace and idle-time policies, soft deletion, administrator controls, and durable audit events as defined in [governance-extension.md](governance-extension.md).
 
 ## Non-goals
 
 - SSO/OIDC and AI model gateway integrations are explicitly removed from this POC.
 - Live Coder control plane, Git remote, or Kubernetes cluster require supplied endpoints, credentials, and human operational review.
 - Arbitrary user-supplied Docker Compose or unrestricted host Docker access.
-- Production auth, production secrets, multi-tenant administration, team sharing, or production release.
+- Production auth, production secrets, team sharing, or production release.
 
 ## Requirements and business rules
 
@@ -60,6 +62,8 @@ The scaffold has no runnable product. A named user needs a small, repeatable por
 5. Repeating a create request with one idempotency key returns one project.
 6. Project and API failures render actionable error/retry states rather than a blank screen.
 7. The focused backend tests, frontend tests, Compose configuration validation, and scaffold validator pass.
+8. Resource policy, administrator authorization, deletion, asynchronous lifecycle transitions, and audit-event persistence satisfy [governance-extension.md](governance-extension.md).
+9. The administrator portal satisfies the Administration CMS contract in [governance-extension.md](governance-extension.md): unified group/item configuration, Projects, Users & roles, corrected audit semantics, three-field basic search with advanced filters, bounded server-side pagination, and administrator project creation.
 
 ## Evidence and traceability
 

@@ -7,6 +7,10 @@
 | TASK-003 | React portal journey and failure states | `apps/portal/src/**`, `apps/portal/test/**` | TASK-001 | human:tdd-developer | READY |
 | TASK-004 | Verification, docs, and operational handoff | `README.md`, `wiki/architecture/**`, feature evidence | TASK-002, TASK-003 | human:release-verifier | READY |
 | TASK-005 | Persistent generated-app workspace, authenticated preview, and Coder template | `apps/control-plane/src/workspace/**`, `apps/control-plane/src/preview/**`, `apps/control-plane/src/auth/**`, `apps/portal/src/**`, `workspace-template/**`, `docker-compose.yml` | TASK-002, TASK-003 | human:tdd-developer | READY |
+| TASK-006 | Resource-governed asynchronous workspace lifecycle and deletion | `apps/control-plane/src/projects/**`, `apps/control-plane/src/workspace/**`, `apps/control-plane/src/entities/**` | `governance-extension.md` | codex:tdd-implementer | IMPLEMENTED — focused and live lifecycle evidence recorded |
+| TASK-007 | Administrator authorization, dynamic configuration, and audit trail | `apps/control-plane/src/admin/**`, `apps/control-plane/src/audit/**`, `apps/control-plane/src/configuration/**`, `apps/control-plane/src/entities/**`, `apps/portal/src/**` | TASK-006 | codex:tdd-implementer | IMPLEMENTED — role/config/audit evidence recorded |
+| TASK-008 | Governance verification and documentation evidence | `wiki/delivery/features/FTR-001-poc-platform/**`, `README.md`, focused/full suites | TASK-006, TASK-007 | codex:verifier | IMPLEMENTED — local verification evidence recorded; independent reviews remain pending |
+| TASK-009 | Mature module-based administration CMS | `apps/control-plane/src/admin/**`, `apps/portal/src/AdminPage.tsx`, `apps/portal/src/api.ts` | TASK-006, TASK-007 | codex:tdd-implementer | IMPLEMENTED — focused/full suites and live verification passed |
 
 ## TASK-001 TDD evidence
 
@@ -107,3 +111,73 @@
 - Follow-up evidence: `App.test.tsx` now verifies named-user login retry and project-creation retry with the same idempotency key; `ErrorState` retry controls are explicit non-submit buttons so retries are intentional and not accidental form submissions. The rebuilt portal passed 8 tests and the authenticated Compose smoke passed at 2026-08-23T05:03:31Z.
 - Follow-up evidence: `api.test.ts` verifies array-valued Nest validation messages remain readable and retain the response request ID; the rebuilt portal passed 9 tests and the authenticated Compose smoke passed at 2026-08-23T05:07:19Z.
 - Follow-up evidence: `docker-compose.yml` now health-checks the static portal on `127.0.0.1`; after correcting the image's localhost address family, all three Compose services reported healthy and the portal HTTP smoke passed at 2026-08-23T05:10:22Z.
+
+## TASK-006 TDD evidence
+
+- Exact files: `apps/control-plane/src/projects/projects.service.ts`, `apps/control-plane/src/projects/projects.service.spec.ts`, `apps/control-plane/src/workspace/workspace-governance.service.ts`, `apps/control-plane/src/workspace/workspace-governance.service.spec.ts`
+- Exact command: `npm --workspace apps/control-plane test -- --runInBand projects.service.spec.ts workspace-governance.service.spec.ts`
+- Expected RED failure: A deletion requested during provisioning could be overwritten by a late provider `Running` response, and no policy worker existed to stop over-limit or idle workspaces.
+- Actual RED result / exit status: Focused Jest lifecycle test failed because deletion called the placeholder workspace ID and provisioning resurrected the project; governance spec initially failed with missing `workspace-governance.service` (exit 1).
+- GREEN result / exit status: Focused project and governance suites passed after transition-state preservation, bounded capacity checks, provider cleanup, and the policy reaper (exit 0).
+- Full-suite evidence: Live Compose lifecycle smoke returned `Creating`, then `Running`; a second active create returned HTTP 409; stop transitioned to `Stopped`; delete returned HTTP 404 on later detail read and retained all six expected audit actions.
+- Environment: Node 20, NestJS, PostgreSQL 16, Docker Compose local provider.
+- Artifact/link: `governance-extension.md` and `verification.md`.
+- Recorded by: codex:tdd-implementer.
+- Timestamp: 2026-08-23T13:44:00Z.
+- Commit/revision: Working tree; repository has no accessible Git metadata in this environment.
+- Dependencies: Approved governed-workspace extension and existing project ownership seam.
+- Risks: Local Compose models owner-scoped data but still shares one code-server process; Coder/Kubernetes is required for production isolation.
+- Commit boundary: Lifecycle state machine, provider cleanup, capacity checks, and reaper only.
+
+## TASK-007 TDD evidence
+
+- Exact files: `apps/control-plane/src/admin/**`, `apps/control-plane/src/audit/**`, `apps/control-plane/src/configuration/**`, `apps/control-plane/src/auth/roles.*`, `apps/portal/src/App.tsx`, `apps/portal/src/api.ts`
+- Exact command: `npm --workspace apps/control-plane test -- --runInBand admin.service.spec.ts admin.controller.spec.ts audit-log.entity.spec.ts && npm --workspace apps/portal test -- --run`
+- Expected RED failure: No admin service/controller, role guard, typed configuration path, audit entity, or administrator portal existed.
+- Actual RED result / exit status: Admin focused test initially failed to import the missing `admin.service`; live startup then exposed TypeORM inferring nullable audit identifiers as `Object`, causing the control plane to exit (exit 1).
+- GREEN result / exit status: Admin/configuration/audit and portal suites passed after explicit PostgreSQL varchar metadata, role guard, controller audit decorator, and admin UI implementation (exit 0).
+- Full-suite evidence: Live administrator smoke returned all three seeded policy keys, denied a member admin request with HTTP 403, and a same-value policy save recorded `CONFIGURATION_UPDATED` with administrator actor and configuration resource ID.
+- Environment: Node 20, NestJS, TypeORM/PostgreSQL 16, React/Vite portal, Docker Compose.
+- Artifact/link: `governance-extension.md` and `wiki/log.md`.
+- Recorded by: codex:tdd-implementer.
+- Timestamp: 2026-08-23T13:44:00Z.
+- Commit/revision: Working tree; repository has no accessible Git metadata in this environment.
+- Dependencies: TASK-006 lifecycle aggregate and named local administrator seed.
+- Risks: Audit events are durable application records but are not a tamper-resistant SIEM export; inner-IDE command telemetry is not collected.
+- Commit boundary: Role authorization, configuration administration, controller/system audit events, and admin portal only.
+
+## TASK-008 TDD evidence
+
+- Exact files: `wiki/delivery/features/FTR-001-poc-platform/governance-extension.md`, `wiki/delivery/features/FTR-001-poc-platform/tasks.md`, `wiki/delivery/features/FTR-001-poc-platform/verification.md`, `wiki/log.md`, `scripts/validate_scaffold.py`
+- Exact command: `npm --workspace apps/control-plane test -- --runInBand && npm --workspace apps/portal test -- --run && python3 scripts/validate_scaffold.py`
+- Expected RED failure: Governance requirements and evidence were absent from the feature package, and the validator exposed generated Terraform provider documentation as a false-positive scanned artifact.
+- Actual RED result / exit status: Scaffold validator failed on an unexcluded generated `.terraform` provider README and missing TASK-006 through TASK-008 structured evidence blocks (exit 1).
+- GREEN result / exit status: Documentation, canonical task evidence, and generated-directory validator exclusion are updated; the relevant suites and validator are rerun after this evidence update.
+- Full-suite evidence: Control-plane 13 suites / 34 tests, portal 2 suites / 11 tests, production builds, live healthy Compose stack, administrator smoke, policy audit smoke, and lifecycle cleanup smoke all passed in this turn.
+- Environment: Node 20, Python 3, Docker Compose, PostgreSQL 16.
+- Artifact/link: `verification.md`, `governance-extension.md`, and `wiki/log.md`.
+- Recorded by: codex:verifier.
+- Timestamp: 2026-08-23T13:44:00Z.
+- Commit/revision: Working tree; repository has no accessible Git metadata in this environment.
+- Dependencies: TASK-006 and TASK-007 implementation evidence.
+- Risks: Independent specification, quality, security, accessibility, operational, and release reviews remain human-owned gates.
+- Commit boundary: Verification evidence and durable documentation only.
+
+## TASK-009 TDD evidence
+
+- Exact files: `apps/control-plane/src/admin/admin.controller.ts`, `apps/control-plane/src/admin/admin.service.ts`, `apps/control-plane/src/admin/dto/cms-query.dto.ts`, `apps/control-plane/src/admin/dto/admin-create-project.dto.ts`, `apps/control-plane/src/admin/dto/update-user-role.dto.ts`, `apps/portal/src/AdminPage.tsx`, `apps/portal/src/App.tsx`, `apps/portal/src/api.ts`, `apps/portal/src/styles.css`
+- Acceptance criteria: Administration CMS criteria 8-12 in `governance-extension.md`.
+- Exact command: `npm --workspace apps/control-plane test -- --runInBand src/admin/admin.service.spec.ts src/admin/admin.controller.spec.ts && npm --workspace apps/portal test -- --run`
+- Expected RED failure: no user/role APIs, no administrator project-create API, generic one-field search only, split configuration modules, and an audit table that labels a user's name as Actor.
+- Actual RED result / exit status: Controller TypeScript compilation failed because filtered project queries, roles, role updates, and administrator project creation did not exist; the portal test failed because Users & roles and unified Configuration navigation did not exist (exit 1).
+- Expected GREEN success: focused backend and portal tests prove multi-field filter forwarding, safe role assignment, administrator project creation, unified configuration navigation, user/role module visibility, advanced search toggling, and corrected audit columns.
+- GREEN result / exit status: Focused backend suites passed 5 tests and the focused portal suite passed 10 tests after implementing the CMS contracts (exit 0).
+- Full-suite evidence: Control-plane passed 13 suites / 40 tests and portal passed 2 suites / 11 tests; production builds passed; the scaffold validator checked 147 Markdown / 281 text files; rebuilt Compose and live browser/API/PostgreSQL verification passed.
+- Environment: Node 20, NestJS, React/Vite, TypeORM, PostgreSQL 16, Docker Compose.
+- Artifact/link: `governance-extension.md`, `verification.md`, and the Directus/Django/Wagtail official documentation recorded in the task conversation.
+- Recorded by: codex:tdd-implementer.
+- Timestamp: 2026-08-23T15:51:00Z.
+- Commit/revision: Working tree; no commit created in this task.
+- Dependencies: TASK-006 and TASK-007.
+- Risks: role changes can remove administrative access; the implementation must preserve at least one Administrator.
+- Commit boundary: administration CMS behavior and documentation only.

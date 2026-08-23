@@ -48,12 +48,14 @@ describe('CoderWorkspaceService', () => {
   });
 
   it('reports the configured Git repository in the workspace mapping', async () => {
-    jest.spyOn(global, 'fetch').mockResolvedValue(new Response(JSON.stringify({ id: 'workspace-2', name: 'vibe-project-2' }), { status: 200 }));
+    jest.spyOn(global, 'fetch')
+      .mockResolvedValueOnce(new Response('{}', { status: 404 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'workspace-2', name: 'vibe-project-2' }), { status: 200 }));
 
     const workspace = await new CoderWorkspaceService().provision('project-2', 'Request Tracker', 'jamie');
 
     expect(workspace.sourceRepository).toBe('https://git.example.test/vibe/request-tracker.git');
-    const [url, init] = (global.fetch as jest.Mock).mock.calls[0] as [string, RequestInit];
+    const [url, init] = (global.fetch as jest.Mock).mock.calls[1] as [string, RequestInit];
     expect(url).toBe('https://coder.example.test/api/v2/organizations/default/members/jamie/workspaces');
     expect(JSON.parse(String(init.body))).toEqual({
       name: 'vibe-project-2',
@@ -64,13 +66,24 @@ describe('CoderWorkspaceService', () => {
 
   it('uses the template ID when no pinned template version is configured', async () => {
     delete process.env.CODER_TEMPLATE_VERSION_ID;
-    jest.spyOn(global, 'fetch').mockResolvedValue(new Response(JSON.stringify({ id: 'workspace-3', name: 'vibe-project-3' }), { status: 200 }));
+    jest.spyOn(global, 'fetch')
+      .mockResolvedValueOnce(new Response('{}', { status: 404 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'workspace-3', name: 'vibe-project-3' }), { status: 200 }));
 
     await new CoderWorkspaceService().provision('project-3', 'Tracker', 'jamie');
 
-    const [, init] = (global.fetch as jest.Mock).mock.calls[0] as [string, RequestInit];
+    const [, init] = (global.fetch as jest.Mock).mock.calls[1] as [string, RequestInit];
     const body = JSON.parse(String(init.body)) as Record<string, unknown>;
     expect(body.template_id).toBe('template-1');
     expect(body.template_version_id).toBeUndefined();
+  });
+
+  it('reuses the deterministic Coder workspace after a control-plane restart', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue(new Response(JSON.stringify({ id: 'workspace-existing', name: 'vibe-project-recover' }), { status: 200 }));
+
+    const workspace = await new CoderWorkspaceService().provision('project-recover', 'Recovered', 'jamie');
+
+    expect(workspace.workspaceId).toBe('workspace-existing');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

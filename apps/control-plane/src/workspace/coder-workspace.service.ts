@@ -17,8 +17,11 @@ export class CoderWorkspaceService implements WorkspaceProvider {
     this.assertConfigured();
     const coderOwner = owner || process.env.CODER_OWNER;
     if (!coderOwner) throw new Error('Coder provider requires a per-user Coder username or CODER_OWNER fallback');
+    const workspaceName = `vibe-${projectId}`;
+    const existing = await this.findWorkspaceByName(coderOwner, workspaceName);
+    if (existing) return this.workspaceRecord(existing.id, existing.name || workspaceName, coderOwner);
     const body: Record<string, unknown> = {
-      name: `vibe-${projectId}`,
+      name: workspaceName,
       rich_parameter_values: [{ name: 'project_name', value: projectName }],
     };
     if (this.templateVersionId) body.template_version_id = this.templateVersionId;
@@ -27,10 +30,13 @@ export class CoderWorkspaceService implements WorkspaceProvider {
       method: 'POST',
       body: JSON.stringify(body),
     });
-    const workspaceName = response.name || `vibe-${projectId}`;
+    return this.workspaceRecord(response.id, response.name || workspaceName, coderOwner);
+  }
+
+  private workspaceRecord(workspaceId: string, workspaceName: string, coderOwner: string): WorkspaceRecord {
     const workspaceUrl = this.appUrl(coderOwner, workspaceName, 'code-server');
     return {
-      workspaceId: response.id,
+      workspaceId,
       sourceRepository: process.env.CODER_GIT_REMOTE_URL || null,
       currentCommit: null,
       workspaceUrl,
@@ -39,12 +45,25 @@ export class CoderWorkspaceService implements WorkspaceProvider {
     };
   }
 
+  private async findWorkspaceByName(owner: string, workspaceName: string): Promise<{ id: string; name?: string } | null> {
+    try {
+      return await this.request(`/api/v2/users/${encodeURIComponent(owner)}/workspace/${encodeURIComponent(workspaceName)}`, { method: 'GET' });
+    } catch (error) {
+      if ((error as { status?: unknown }).status === 404) return null;
+      throw error;
+    }
+  }
+
   async start(workspaceId: string): Promise<void> {
     await this.request(`/api/v2/workspaces/${encodeURIComponent(workspaceId)}/builds`, { method: 'POST', body: JSON.stringify({ transition: 'start' }) });
   }
 
   async stop(workspaceId: string): Promise<void> {
     await this.request(`/api/v2/workspaces/${encodeURIComponent(workspaceId)}/builds`, { method: 'POST', body: JSON.stringify({ transition: 'stop' }) });
+  }
+
+  async delete(workspaceId: string): Promise<void> {
+    await this.request(`/api/v2/workspaces/${encodeURIComponent(workspaceId)}`, { method: 'DELETE' });
   }
 
   async describe(workspaceId: string, owner?: string): Promise<WorkspaceSnapshot> {
@@ -93,7 +112,11 @@ export class CoderWorkspaceService implements WorkspaceProvider {
     if (coderToken) headers.set('Coder-Session-Token', coderToken);
     const response = await fetch(this.baseUrl + path, { ...init, headers });
     const payload = await response.json().catch(() => ({})) as { message?: string };
-    if (!response.ok) throw new Error(payload.message || `Coder request failed with status ${response.status}`);
+    if (!response.ok) {
+      const error = new Error(payload.message || `Coder request failed with status ${response.status}`) as Error & { status?: number };
+      error.status = response.status;
+      throw error;
+    }
     return payload as T;
   }
 

@@ -75,9 +75,9 @@ gates:
     next_transition: IMPLEMENTING
   tdd:
     owner: "codex:tdd-implementer"
-    checked_inputs: ["tasks.md#task-001-tdd-evidence", "tasks.md#task-003-tdd-evidence", "tasks.md#task-005-tdd-evidence"]
+    checked_inputs: ["tasks.md#task-001-tdd-evidence", "tasks.md#task-003-tdd-evidence", "tasks.md#task-005-tdd-evidence", "tasks.md#task-006-tdd-evidence", "tasks.md#task-007-tdd-evidence", "tasks.md#task-008-tdd-evidence"]
     result: PASS
-    evidence: ["tasks.md#task-001-tdd-evidence", "tasks.md#task-003-tdd-evidence", "tasks.md#task-005-tdd-evidence"]
+    evidence: ["tasks.md#task-001-tdd-evidence", "tasks.md#task-003-tdd-evidence", "tasks.md#task-005-tdd-evidence", "tasks.md#task-006-tdd-evidence", "tasks.md#task-007-tdd-evidence", "tasks.md#task-008-tdd-evidence"]
     failure_reason: null
     exception_id: null
     next_transition: SPEC_REVIEW

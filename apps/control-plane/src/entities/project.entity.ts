@@ -4,14 +4,19 @@ import { User } from './user.entity';
 
 export enum ProjectStatus {
   Creating = 'Creating',
+  Starting = 'Starting',
   Running = 'Running',
+  Stopping = 'Stopping',
   Stopped = 'Stopped',
+  Deleting = 'Deleting',
+  Deleted = 'Deleted',
   Failed = 'Failed',
 }
 
 @Entity('projects')
-@Index(['owner', 'name'], { unique: true })
+@Index(['owner', 'name'], { unique: true, where: '"deletedAt" IS NULL' })
 @Index(['owner', 'idempotencyKey'], { unique: true, where: '"idempotencyKey" IS NOT NULL' })
+@Index(['owner', 'status'])
 export class Project {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
@@ -65,4 +70,22 @@ export class Project {
 
   @Column({ type: 'timestamp', nullable: true })
   lastOpenedAt!: Date | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastActivityAt!: Date | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  provisioningStartedAt!: Date | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  provisionedAt!: Date | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  stoppedAt!: Date | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  statusChangedAt!: Date | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  deletedAt!: Date | null;
 }

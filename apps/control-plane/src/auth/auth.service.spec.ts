@@ -16,6 +16,8 @@ describe('AuthService local named-user login', () => {
   });
 
   it('rejects unknown local named users', async () => {
+    process.env.LOCAL_DEMO_AUTH = 'true';
+    process.env.NODE_ENV = 'development';
     const userRepository = { findOneBy: jest.fn().mockResolvedValue(null) };
     const service = new AuthService(userRepository as never, {} as never);
 
@@ -23,6 +25,8 @@ describe('AuthService local named-user login', () => {
   });
 
   it('issues a JWT session for a known local named user', async () => {
+    process.env.LOCAL_DEMO_AUTH = 'true';
+    process.env.NODE_ENV = 'development';
     const user = { id: 'user-1', email: 'alex@example.test', name: 'Alex Chen' };
     const userRepository = { findOneBy: jest.fn().mockResolvedValue(user) };
     const jwtService = { signAsync: jest.fn().mockResolvedValue('signed-session') };

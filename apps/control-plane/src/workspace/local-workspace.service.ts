@@ -62,6 +62,7 @@ export class LocalWorkspaceService implements WorkspaceProvider {
   }
 
   async start(workspaceId: string): Promise<void> {
+    await this.assertWorkspace(workspaceId);
     await this.ensureSource(workspaceId);
     await this.initializeDatabase(workspaceId);
     await this.setLifecycle(workspaceId, 'Running');
@@ -70,6 +71,12 @@ export class LocalWorkspaceService implements WorkspaceProvider {
   async stop(workspaceId: string): Promise<void> {
     await this.assertWorkspace(workspaceId);
     await this.setLifecycle(workspaceId, 'Stopped');
+  }
+
+  async delete(workspaceId: string): Promise<void> {
+    const workspacePath = this.workspacePath(workspaceId);
+    await rm(workspacePath, { recursive: true, force: true });
+    await rm(join(this.workspaceRoot, 'git-recovery', workspaceId), { recursive: true, force: true });
   }
 
   async restoreFromGit(workspaceId: string): Promise<string> {
@@ -134,6 +141,11 @@ export class LocalWorkspaceService implements WorkspaceProvider {
     return join(this.workspaceRoot, workspaceId, 'source');
   }
 
+  private workspacePath(workspaceId: string): string {
+    if (!/^local-[a-z0-9-]+$/i.test(workspaceId)) throw new Error('Invalid workspace ID');
+    return join(this.workspaceRoot, workspaceId);
+  }
+
   private codeServerWorkspaceUrl(workspaceId: string): string {
     return `${this.codeServerBaseUrl}/?folder=/workspaces/${workspaceId}/source`;
   }
@@ -161,14 +173,20 @@ export class LocalWorkspaceService implements WorkspaceProvider {
   }
 
   private async assertWorkspace(workspaceId: string): Promise<void> {
-    await this.initializeDatabase(workspaceId);
+    if (!nodeFs.existsSync(this.workspacePath(workspaceId))) {
+      throw new Error('Workspace not found');
+    }
   }
 
   private async ensureSource(workspaceId: string): Promise<string> {
     const sourcePath = this.sourcePath(workspaceId);
     await mkdir(sourcePath, { recursive: true });
     await this.migrateLegacyLayout(sourcePath);
-    if (!nodeFs.existsSync(join(sourcePath, '.clinerules')) || !nodeFs.existsSync(join(sourcePath, '.github', 'copilot-instructions.md'))) {
+    if (
+      !nodeFs.existsSync(join(sourcePath, '.clinerules'))
+      || !nodeFs.existsSync(join(sourcePath, '.github', 'copilot-instructions.md'))
+      || !nodeFs.existsSync(join(sourcePath, '.github', 'skills', 'manifest.yaml'))
+    ) {
       await this.copyGoldenApp(sourcePath);
     }
     if (!nodeFs.existsSync(join(sourcePath, 'backend', 'main.py'))) {
@@ -218,6 +236,15 @@ export class LocalWorkspaceService implements WorkspaceProvider {
       for (const filepath of [
         '.clinerules/ponytail.md',
         '.github/copilot-instructions.md',
+        '.github/skills/manifest.yaml',
+        '.github/skills/brainstorm-and-converge/SKILL.md',
+        '.github/skills/frontend-design-direction/SKILL.md',
+        '.github/skills/implementation-minimality/SKILL.md',
+        '.github/skills/intake-sizing-and-escalation/SKILL.md',
+        '.github/skills/prototype-spike/SKILL.md',
+        '.github/skills/skill-supply-chain-review/SKILL.md',
+        '.github/skills/ux-product-design/SKILL.md',
+        '.github/skills/visual-browser-qa/SKILL.md',
         'backend/main.py', 'backend/requirements.txt', 'backend/static/index.html', 'backend/test_main.py',
         'frontend/.gitignore', 'frontend/package.json', 'frontend/index.html', 'frontend/tsconfig.json',
         'frontend/tsconfig.node.json', 'frontend/vite.config.ts',
