@@ -7,6 +7,7 @@ This image is the repeatable browser-IDE runtime for the POC's Coder provider.
 - Generated app data: SQLite inside the workspace volume
 - Runtime tools: Node.js 20, Git, Python 3.8, and Python virtual-environment support
 - IDE extension: pinned Cline `saoudrizwan.claude-dev` 3.59.0
+- Project guidance: pinned Ponytail `.clinerules/ponytail.md` and `.github/copilot-instructions.md` snapshots for Cline/GitHub Copilot YAGNI/minimal-diff behavior
 
 The integrated terminal starts with `/opt/vibe/python-venv/bin` first on `PATH`.
 That means both `python` and `python3` use the prepared template runtime, and

@@ -168,6 +168,9 @@ export class LocalWorkspaceService implements WorkspaceProvider {
     const sourcePath = this.sourcePath(workspaceId);
     await mkdir(sourcePath, { recursive: true });
     await this.migrateLegacyLayout(sourcePath);
+    if (!nodeFs.existsSync(join(sourcePath, '.clinerules')) || !nodeFs.existsSync(join(sourcePath, '.github', 'copilot-instructions.md'))) {
+      await this.copyGoldenApp(sourcePath);
+    }
     if (!nodeFs.existsSync(join(sourcePath, 'backend', 'main.py'))) {
       await writeFile(join(sourcePath, 'README.md'), '# Recovered Vibe Code Project\n', { flag: 'a' });
       await writeFile(join(sourcePath, 'workspace.json'), JSON.stringify({ workspaceId, runtime: 'local-poc' }, null, 2), { flag: 'a' });
@@ -213,6 +216,8 @@ export class LocalWorkspaceService implements WorkspaceProvider {
       await git.add({ fs: nodeFs, dir: sourcePath, filepath: 'README.md' });
       await git.add({ fs: nodeFs, dir: sourcePath, filepath: 'workspace.json' });
       for (const filepath of [
+        '.clinerules/ponytail.md',
+        '.github/copilot-instructions.md',
         'backend/main.py', 'backend/requirements.txt', 'backend/static/index.html', 'backend/test_main.py',
         'frontend/.gitignore', 'frontend/package.json', 'frontend/index.html', 'frontend/tsconfig.json',
         'frontend/tsconfig.node.json', 'frontend/vite.config.ts',
@@ -245,6 +250,12 @@ export class LocalWorkspaceService implements WorkspaceProvider {
     ];
     const templateRoot = candidates.find((candidate) => nodeFs.existsSync(candidate));
     if (!templateRoot) return;
+    if (nodeFs.existsSync(join(templateRoot, '.clinerules'))) {
+      await cp(join(templateRoot, '.clinerules'), join(sourcePath, '.clinerules'), { recursive: true, force: false });
+    }
+    if (nodeFs.existsSync(join(templateRoot, '.github'))) {
+      await cp(join(templateRoot, '.github'), join(sourcePath, '.github'), { recursive: true, force: false });
+    }
     await cp(join(templateRoot, 'backend'), join(sourcePath, 'backend'), { recursive: true, force: false });
     await cp(join(templateRoot, 'frontend'), join(sourcePath, 'frontend'), { recursive: true, force: false });
   }

@@ -27,6 +27,8 @@ describe('LocalWorkspaceService', () => {
     expect(workspace.workspaceUrl).toBe('http://localhost:8080/?folder=/workspaces/local-project-1/source');
     const snapshot = await service.describe(workspace.workspaceId);
     expect(snapshot.sourceFiles).toEqual(expect.arrayContaining(['backend', 'frontend']));
+    expect(snapshot.sourceFiles).toContain('.clinerules');
+    expect(snapshot.sourceFiles).toContain('.github');
     expect(snapshot.sourceFiles).not.toContain('main.py');
     await expect(service.listRequests(workspace.workspaceId)).resolves.toEqual([]);
   });

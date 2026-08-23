@@ -91,7 +91,7 @@ resource "coder_agent" "main" {
     git config user.email 'platform@localhost.test'
     if [ ! -d .git ]; then
       git init -b main
-      git add README.md backend frontend
+      git add README.md .clinerules .github backend frontend
       git commit -m 'Initialize golden project'
     fi
     if [ -n "$${GIT_REMOTE_URL:-}" ]; then

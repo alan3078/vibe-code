@@ -1,0 +1,275 @@
+schema_version: 1
+skills:
+- id: intake-sizing-and-escalation
+  path: .github/skills/intake-sizing-and-escalation/SKILL.md
+  lifecycle_states:
+  - INTAKE
+  owning_agent: orchestrator
+  triggers:
+  - Every new change request.
+  - New evidence widens scope or risk.
+  anti_triggers:
+  - Never as a lifecycle bypass.
+  required_inputs:
+  - request
+  - scope and risk evidence
+  required_outputs:
+  - classification
+  - rationale and escalation triggers
+  tools:
+  - read
+  - search
+  side_effects: []
+  concurrency: independent
+  allow_implicit_invocation: true
+  provenance: &id002
+    origin: internal
+    license: MIT
+    sources: []
+- id: brainstorm-and-converge
+  path: .github/skills/brainstorm-and-converge/SKILL.md
+  lifecycle_states:
+  - INTAKE
+  - PROPOSAL
+  - DISCOVERY
+  - DESIGN
+  owning_agent: architect
+  triggers:
+  - Ambiguous solution direction.
+  - Architectural classification requires alternatives.
+  anti_triggers:
+  - Clear bug or small bounded work.
+  required_inputs:
+  - approved outcome
+  - constraints
+  - intake classification
+  required_outputs:
+  - option matrix
+  - recommendation and approval owner
+  tools:
+  - read
+  - search
+  side_effects: []
+  concurrency: independent
+  allow_implicit_invocation: true
+  provenance:
+    origin: composite
+    license: MIT
+    sources:
+    - url: https://github.com/obra/superpowers.git
+      revision: b36e0829c6d0140e93cfef2ca599b1b07d4a7797
+      license: MIT
+      license_path: LICENSE
+      license_sha256: a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400
+      verified_at: '2026-08-22'
+      verified_by: agent:controller-01
+      adaptation: Adapted option-comparison and convergence discipline; no code copied.
+- id: ux-product-design
+  path: .github/skills/ux-product-design/SKILL.md
+  lifecycle_states:
+  - DESIGN
+  owning_agent: architect
+  triggers:
+  - User-facing journey or interaction changes.
+  anti_triggers:
+  - Backend-only or documentation-only work without UX impact.
+  required_inputs:
+  - actors and use cases
+  - scope and states
+  - device, locale, and accessibility constraints
+  required_outputs:
+  - journey and IA
+  - interaction-state matrix
+  - acceptance links
+  tools:
+  - read
+  - search
+  side_effects: []
+  concurrency: independent
+  allow_implicit_invocation: true
+  provenance:
+    origin: composite
+    license: MIT
+    sources:
+    - &id001
+      url: https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git
+      revision: bc826e2267a36d98a2dcf5231e16c30ff546770f
+      license: MIT
+      license_path: LICENSE
+      license_sha256: 738f69dfa83db5c347c678fb9d90e560877059f0de93a327c39001bff92dc014
+      verified_at: '2026-08-22'
+      verified_by: agent:controller-01
+      adaptation: Selective UX and visual-design ideas only; CLI, engine, datasets,
+        installer, hooks, and auto-implementation excluded.
+- id: frontend-design-direction
+  path: .github/skills/frontend-design-direction/SKILL.md
+  lifecycle_states:
+  - DESIGN
+  owning_agent: architect
+  triggers:
+  - New or materially changed visual presentation.
+  anti_triggers:
+  - Journey discovery or accessibility sign-off.
+  required_inputs:
+  - approved UX
+  - existing design system
+  - brand and accessibility constraints
+  required_outputs:
+  - visual direction
+  - semantic-token and responsive guidance
+  tools:
+  - read
+  - search
+  side_effects: []
+  concurrency: independent
+  allow_implicit_invocation: true
+  provenance:
+    origin: composite
+    license: MIT
+    sources:
+    - url: https://github.com/anthropics/skills.git
+      revision: 3b3fad96af16a10759d930941b4520ba0c40edae
+      license: Apache-2.0
+      license_path: skills/frontend-design/LICENSE.txt
+      license_sha256: 0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594
+      verified_at: '2026-08-22'
+      verified_by: agent:controller-01
+      adaptation: Selective frontend design-direction ideas only; no upstream code
+        copied.
+    - *id001
+- id: prototype-spike
+  path: .github/skills/prototype-spike/SKILL.md
+  lifecycle_states:
+  - DISCOVERY
+  - DESIGN
+  owning_agent: tdd-developer
+  triggers:
+  - One high-risk falsifiable question requires disposable evidence.
+  anti_triggers:
+  - Production implementation or multiple unrelated questions.
+  required_inputs:
+  - question and hypothesis
+  - time box
+  - allowed scope and disposal plan
+  required_outputs:
+  - reproducible evidence
+  - decision
+  - disposal proof
+  tools:
+  - read
+  - search
+  - edit
+  - execute
+  side_effects:
+  - write_files
+  - execute_commands
+  concurrency: exclusive
+  allow_implicit_invocation: false
+  provenance: *id002
+- id: implementation-minimality
+  path: .github/skills/implementation-minimality/SKILL.md
+  lifecycle_states:
+  - PLANNED
+  - IMPLEMENTING
+  - QUALITY_SECURITY_REVIEW
+  owning_agent: code-reviewer
+  triggers:
+  - Every executable task before implementation.
+  anti_triggers:
+  - Never to remove safety, test, accessibility, or data controls.
+  required_inputs:
+  - approved task
+  - existing seams and dependencies
+  - non-negotiable controls
+  required_outputs:
+  - chosen ladder rung
+  - rejected earlier rungs
+  - quality recheck
+  tools:
+  - read
+  - search
+  side_effects: []
+  concurrency: independent
+  allow_implicit_invocation: true
+  provenance:
+    origin: composite
+    license: MIT
+    sources:
+    - url: https://github.com/dietrichgebert/ponytail.git
+      revision: 2ed6c52c9d7e5e56942508591085fd45dea277d3
+      license: MIT
+      license_path: LICENSE
+      license_sha256: fb1bc6909ac3ef82d5c22106e32ef682b0cff66788fa915fb9b53b15c9d2f3ab
+      verified_at: '2026-08-22'
+      verified_by: agent:controller-01
+      adaptation: Adapted only the minimality ladder; plugin, hooks, modes, benchmark,
+        and runtime excluded.
+- id: visual-browser-qa
+  path: .github/skills/visual-browser-qa/SKILL.md
+  lifecycle_states:
+  - QUALITY_SECURITY_REVIEW
+  owning_agent: code-reviewer
+  triggers:
+  - User-facing web changes or plausible browser regressions.
+  anti_triggers:
+  - Non-browser changes with a concrete N/A rationale.
+  required_inputs:
+  - frozen revision
+  - routes and safe fixtures
+  - viewports and acceptance criteria
+  required_outputs:
+  - report-only QA matrix
+  - screenshots and reproduction evidence
+  tools:
+  - read
+  - search
+  - execute
+  side_effects:
+  - execute_commands
+  - browser_navigation
+  - network_access
+  - screenshots
+  concurrency: exclusive
+  allow_implicit_invocation: false
+  provenance:
+    origin: composite
+    license: MIT
+    sources:
+    - url: https://github.com/garrytan/gstack.git
+      revision: 85fd9db554ae4aaaa6d356d2daf873121ee85bdd
+      license: MIT
+      license_path: LICENSE
+      license_sha256: e56fbb5b3d95756f3fa1cfefa24732ec79f18ece1ad08a4e79e00df57e8b198c
+      verified_at: '2026-08-22'
+      verified_by: agent:controller-01
+      adaptation: Adapted report-only browser QA evidence patterns; auto-fix, auto-commit,
+        and runtime plumbing excluded.
+- id: skill-supply-chain-review
+  path: .github/skills/skill-supply-chain-review/SKILL.md
+  lifecycle_states:
+  - PROPOSAL
+  - DISCOVERY
+  - DESIGN
+  owning_agent: security-reviewer
+  triggers:
+  - Adding, upgrading, or expanding an external skill source.
+  anti_triggers:
+  - Internally authored wording with no external source.
+  required_inputs:
+  - source and revision
+  - license and files
+  - tools, side effects, dependencies, and update mechanism
+  required_outputs:
+  - risk review
+  - pinned provenance and hashes
+  - update and rollback plan
+  tools:
+  - read
+  - search
+  - execute
+  side_effects:
+  - network_access
+  - execute_commands
+  concurrency: serialized
+  allow_implicit_invocation: false
+  provenance: *id002
